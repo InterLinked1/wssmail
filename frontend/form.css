@@ -1,0 +1,35 @@
+.form-table  { display: table; }
+.form-table > div { display: table-row; }
+.form-table > div > label { display: table-cell; padding: 2px 5px; }
+.form-table > div > input { display: table-cell; }
+
+#login-container {
+	max-width: 400px;
+	margin: 0 auto;
+}
+#login {
+	margin: 5px;
+	background-color: tan;
+	padding: 15px;
+	display: block;
+	margin: 0px auto;
+}
+#loginbtn {
+	margin: 0 auto;
+	display: block;
+	max-width: 55px;
+	padding-top: 5px;
+}
+
+#composer input[type="text"] {
+	min-width: 400px;
+}
+#composer input[type="submit"] {
+	margin: 5px;
+}
+#composer textarea {
+	margin-top: 15px;
+	width: 100%;
+	min-height: 350px;
+	white-space: pre-wrap;
+}

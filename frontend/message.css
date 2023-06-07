@@ -1,0 +1,42 @@
+.plaintext {
+	white-space: pre-wrap;
+}
+
+#msg-headers {
+	display: table;
+	padding-left: 5px;
+	padding-bottom: 5px;
+}
+#msg-headers > div {
+	display: table-row;
+}
+.hdr-name, .hdr-val {
+	display: table-cell;
+}
+.hdr-name {
+	text-align: right;
+	padding-right: 4px;
+	font-weight: 500;
+}
+.msg-body {
+	padding-top: 10px;
+	padding-bottom: 10px;
+	border-top: 1px solid gray;
+	word-wrap: break-word;
+}
+.msg-attachments h4 {
+	font-weight: 500;
+}
+
+/* This is the root quote depth (no quoting), i.e. it's leftmost */
+.plaintext-ff {
+	padding-left: 12px;
+	white-space: pre;
+}
+.plaintext-ff-sub {
+	margin-top: 10px;
+	margin-bottom: 7px;
+	padding-left: 12px;
+	border-left: 3px solid gray;
+	width: inherit;
+}
