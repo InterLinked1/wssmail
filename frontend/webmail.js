@@ -724,6 +724,22 @@ function notifyNewMessage(msg) {
 	};
 }
 
+function moveToFrontByName(array, name) {
+	for (i = 0; i < array.length; i++) {
+		if (array[i].name === name) {
+			array.unshift(array.splice(i, 1)[0]);
+		}
+	}
+}
+
+function moveToFrontByFlag(array, flag) {
+	for (i = 0; i < array.length; i++) {
+		if (array[i].flags.indexOf(flag) !== -1) {
+			array.unshift(array.splice(i, 1)[0]);
+		}
+	}
+}
+
 ws.onmessage = function(e) {
 	var jsonData = JSON.parse(e.data);
 	console.log(jsonData);
@@ -741,16 +757,42 @@ ws.onmessage = function(e) {
 			var url = new URL(window.location.href);
 			const searchParams = new URLSearchParams(url.search);
 			var allowSelection = false;
-			for (var name in jsonData.data) {
-				addToFolderMenu(searchParams, root_ul, jsonData.data[name]);
+			folders = jsonData.data;
+
+			/* Sort alphabetically first */
+			folders.sort(function(a, b) {
+				return a.name.localeCompare(b.name);
+			});
+
+			/* In reverse order that we want them to appear */
+
+			/* In case RFC 6154 SPECIAL-USE is not supported by the IMAP server,
+			 * manually detect these folder names and order them as such.
+			 * If it is supported, this won't do any harm (we'll just redo this, basically)	
+			 */
+			moveToFrontByName(folders, "Trash");
+			moveToFrontByName(folders, "Junk");
+			moveToFrontByName(folders, "Archive");
+			moveToFrontByName(folders, "Sent");
+			moveToFrontByName(folders, "Drafts");
+			/* RFC 6154 SPECIAL-USE */
+			moveToFrontByFlag(folders, "Trash");
+			moveToFrontByFlag(folders, "Junk");
+			moveToFrontByFlag(folders, "Sent");
+			moveToFrontByFlag(folders, "Drafts");
+			/* INBOX at very top */
+			moveToFrontByName(folders, "INBOX");
+
+			for (var name in folders) {
+				addToFolderMenu(searchParams, root_ul, folders[name]);
 				/* We'll get a LIST response twice,
 				 * the first time with just folder names,
 				 * and the second time with all the STATUS details.
 				 * Don't issue the SELECT until the second time, to avoid sending it twice. */
-				allowSelection = jsonData.data[name].unseen !== undefined;
-				moveto += "<option value='" + jsonData.data[name].name + "'>" + jsonData.data[name].name + "</option>";
+				allowSelection = folders[name].unseen !== undefined;
+				moveto += "<option value='" + folders[name].name + "'>" + folders[name].name + "</option>";
 			}
-			folders = jsonData.data;
+
 			/* Now that folders are available (on page load), we can try to select the active one */
 			if (allowSelection && selectedFolder !== null) {
 				commandSelectFolder(selectedFolder, true);
