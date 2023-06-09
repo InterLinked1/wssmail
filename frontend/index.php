@@ -13,7 +13,6 @@
  * - wget https://raw.githubusercontent.com/composer/getcomposer.org/main/web/installer -O - -q | php -- --quiet
  * - php composer.phar require phpmailer/phpmailer
  * - Ensure the PHP imap extension is installed.
- * - Enable mod_cspnonce if desired (a2enmod cspnonce; service apache2 restart)
  *
  * This frontend depends on a compatible webmail backend (such as mod_webmail in LBBS: https://github.com/InterLinked1/lbbs/)
  * These backends may have different license terms.
@@ -27,6 +26,7 @@
  * - Message listings include sequence numbers, UIDs, and message sizes, to aid in debugging.
  * - View total number of messages in and size of each mailbox (folder)
  * - Advanced message operations: copying messages to other mailboxes.
+ * - RFC 2177 IMAP IDLE (realtime notifications)
  *
  * Currently supported (standard) features:
  * - Basic message listing: subject, from, recipients, sent/received times, flagged status, attachment status, priority indication
@@ -34,6 +34,7 @@
  * - Basic message operations (delete, move, mark read/unread), etc., including on multiple messages at a time
  * - Preview pane or open messages in separate tab
  * - Basic message composition of plain text emails.
+ * - Mailbox ordering based on LIST response, including RFC 6154 SPECIAL USE attributes
  * - Draft saving
  * - Set priority of composed messages
  * - Rendering format=flowed plain text messages
@@ -43,9 +44,6 @@
  * - Save copies of sent messages to Sent folder (via IMAP APPEND)
  * - Content Security Policy to mitigate CSS and JS injection in modern browsers
  *
- * Fix to make work again:
- * - Composition stuff, e.g. reply/reply all/forward
- *
  * Very nearly supported:
  * - Sending format=flowed plain text messages
  *
@@ -54,7 +52,6 @@
  * - Stay logged in "forever" does not work properly
  *
  * Not currently supported, but would be nice to have (future roadmap):
- * - IMAP IDLE
  * - Downloading/detaching/deleting attachments.
  * - Resuming or sending email drafts
  * - Faithful HTML rendering (Content Security Policy currently prevents this)

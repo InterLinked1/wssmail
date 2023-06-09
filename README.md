@@ -54,6 +54,16 @@ Both are required to make wssmail work. In theory, the components could each hav
 
 No configuration is required of the backend (apart from the WebSocket server port in `net_ws.conf`); as long as you have LBBS running with the appropriate modules loaded, the backend should be good to go. Refer to the [LBBS](https://github.com/InterLinked1/lbbs) repository for more details on that.
 
+The frontend requires the PHP `imap` and `openssl` extensions for SMTP. Please make sure they are enabled.
+
+To install the frontend, navigate to the directory that will serve the webmail application, then run:
+```
+wget https://raw.githubusercontent.com/composer/getcomposer.org/main/web/installer -O - -q | php -- --quiet
+php composer.phar require phpmailer/phpmailer
+```
+
+Then, clone or copy the contents of the `frontend` directory into the above directory.
+
 Basic configuration of your frontend web server is required for the frontend site. Apart from serving the frontend files, WebSocket connections to your frontend host will also need to be reverse proxied to the LBBS WebSocket server. This could be done as follows, for an Apache HTTP virtualhost:
 
 ```
