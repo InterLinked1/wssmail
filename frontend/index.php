@@ -24,6 +24,7 @@
  *   made possible by the use of websockets, rather than using AJAX or full page (re)loads.
  * - Lightweight interface, not bloated, yet designed with power users in mind. Ideal for older browsers and slower connections.
  * - Message listings include sequence numbers, UIDs, and message sizes, to aid in debugging.
+ * - Status bar includes UIDVALIDITY and UIDNEXT of selected mailboxes
  * - View total number of messages in and size of each mailbox (folder)
  * - Advanced message operations: copying messages to other mailboxes.
  * - RFC 2177 IMAP IDLE (realtime notifications)
@@ -215,7 +216,7 @@ if (!isset($_SESSION['webmail'])) {
 				if (!isset($settings['login']['smtp']['server'])) {
 				?>
 					<div>
-						<label for="server">SMTP Server</label><input type="text" id="smtpserver" name="smtpserver" value="localhost"/>
+						<label for="smtpserver">SMTP Server</label><input type="text" id="smtpserver" name="smtpserver" value="localhost"/>
 					</div>
 				<?php
 				}
@@ -225,11 +226,11 @@ if (!isset($_SESSION['webmail'])) {
 						<label>SMTP Security</label>
 						<div>
 							<input type="radio" id="smtp-security-plain" name="smtpsecurity" value="none" checked onchange="setport('smtpport', 143)" />
-							<label for="security-smtp-plain">None</label>
+							<label for="smtp-security-plain">None</label>
 							<input type="radio" id="smtp-security-starttls" name="smtpsecurity" value="starttls" onchange="setport('smtpport', 587)" />
-							<label for="security-smtp-starttls">STARTTLS</label>
+							<label for="smtp-security-starttls">STARTTLS</label>
 							<input type="radio" id="smtp-security-tls" name="smtpsecurity" value="tls" onchange="setport('smtpport', 465)" />
-							<label for="security-smtp-tls">TLS</label>
+							<label for="smtp-security-tls">TLS</label>
 						</div>
 					</div>
 				<?php
@@ -723,7 +724,11 @@ startHTML();
 	<div id="statusbar">
 		<p id="clientname"><a href="https://github.com/InterLinked1/wssmail" title="All webmail clients suck. This one just sucks less.">wssmail</a></p>
 		<p id='errorbar' class='error'></p>
-		<div id='quota'></div>
+		<div id='status-right'>
+			<span id='uidnext' title='UIDNEXT'></span>
+			<span id='uidvalidity' title='UIDVALIDITY'></span>
+			<span id='quota' title='QUOTA'></span>
+		</div>
 	</div>
 	<script src='webmail.js'></script>
 </body>

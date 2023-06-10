@@ -470,6 +470,10 @@ function responseSelectFolder(folderinfo) {
 		}
 	}
 
+	/* XXX If we do a FETCHLIST (e.g. on IDLE update), these aren't updated (UIDNEXT in particular, for EXISTS) */
+	document.getElementById('uidvalidity').textContent = folderinfo.uidvalidity;
+	document.getElementById('uidnext').textContent = folderinfo.uidnext + "+";
+
 	document.title = title;
 	setq(null, null); /* Update URL */
 }
@@ -560,6 +564,10 @@ function endFolderView() {
 }
 
 function setQuota(total, used) {
+	if (total === undefined || used === undefined) {
+		document.getElementById('quota').textContent = '';
+		return;
+	}
 	var percent = (100 * used / total).toFixed(1);
 	var p = "" + used + "/" + total + " KB (" + percent + "%)";
 	document.getElementById('quota').textContent = p;
