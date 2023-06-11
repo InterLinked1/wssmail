@@ -182,6 +182,7 @@ if (!isset($_SESSION['webmail'])) {
 							<option value="iCloud">iCloud</option>
 							<option value="Yandex">Yandex</option>
 							<option value="PurelyMail">PurelyMail</option>
+							<option value="Riseup">Riseup</option>
 						</select>
 					</div>
 				<?php
@@ -322,6 +323,8 @@ function setPreset(provider) {
 		autoconfigure("imap.yandex.com", true, 993, "smtp.yandex.com", "tls", 465, true);
 	} else if (provider === "PurelyMail") {
 		autoconfigure("imap.purelymail.com", true, 993, "smtp.purelymail.com", "tls", 465, true);
+	} else if (provider === "Riseup") {
+		autoconfigure("mail.riseup.net", true, 993, "mail.riseup.net", "tls", 465, true);
 	}
 	<?php
 	/* This script block is on the page because we need to dynamically created JavaScript here.
