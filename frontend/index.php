@@ -28,6 +28,7 @@
  * - View total number of messages in and size of each mailbox (folder)
  * - Advanced message operations: copying messages to other mailboxes.
  * - RFC 2177 IMAP IDLE (realtime notifications)
+ * - RFC 6186 autoconfiguration
  *
  * Currently supported (standard) features:
  * - Basic message listing: subject, from, recipients, sent/received times, flagged status, attachment status, priority indication
@@ -245,7 +246,7 @@ if (!isset($_SESSION['webmail'])) {
 				}
 				?>
 				<div>
-					<label for="username">Username</label><input type="text" name="username" autocomplete="username" value=""/>
+					<label for="username">Username</label><input type="text" id="login-username" name="username" autocomplete="username" value=""/>
 				</div>
 				<div>
 					<label for="password">Password</label><input type="password" name="password" autocomplete="current-password" value=""/>
@@ -275,6 +276,16 @@ if (!isset($_SESSION['webmail'])) {
 			<div id="loginbtn">
 				<input type="submit" value="Log in" />
 			</div>
+			<?php
+			if (!isset($settings['login']['imap']['server'])) {
+			?>
+				<p style='text-align: center; font-weight: 500;'>Don't know your server details?
+				<br>Enter your email address for 'Username' and query:</p>
+				<center><input id="lookup-btn" type="button" value="Query Server Info" /></center>
+			<?php
+			}
+			?>
+
 			<p style='text-align: center; font-weight: 500;'><a href="#" title="All webmail clients suck. This one just sucks less.">wssmail</a></p>
 			<p style='text-align: center;'><i>All webmail clients suck. This one just sucks less.</i></p>
 			<?php
@@ -347,6 +358,60 @@ function setPreset(provider) {
 	}
 	?>
 }
+
+/* RFC 6186 support */
+function fetchDNS(prot, domain) {
+	var url = "https://dns.google/resolve?name=_" + prot + "._tcp." + domain + "&type=SRV";
+	console.log("DNS SRV lookup: " + prot + "._tcp." + domain);
+	fetch(url).then(function(res) {
+		if (res.ok) {
+			res.json().then(function(data) {
+				if (data.Answer === undefined) {
+					console.error("No SRV records found"); /* But not our fault */
+					return;
+				}
+				var name = data.Answer[0].name;
+				var data = data.Answer[0].data;
+				if (name === undefined || data === undefined) {
+					console.error("SRV answer empty");
+					return;
+				}
+				console.log(data);
+				data = data.split(' ');
+				if (name.substring(0, 6) === "_imaps") {
+					document.getElementById('server').value = data[3];
+					document.getElementById('port').value = data[2];
+					document.getElementById('security-tls').checked = true;
+				} else if (name.substring(0, 11) === "_submission") {
+					document.getElementById('smtpserver').value = data[3];
+					document.getElementById('smtpport').value = data[2];
+					if (data[2] === "587") {
+						document.getElementById('smtp-security-starttls').checked = true;
+					} else if (data[2] === "465") {
+						document.getElementById('smtp-security-tls').checked = true;
+					} else {
+						/* I dunno, do you? */
+					}
+				} else {
+					console.error("Unexpected: " + name);
+				}
+			});
+		} else {
+			console.error("Request failed with code " + res.status);
+		}
+	});
+}
+
+document.getElementById('lookup-btn').addEventListener('click', function() {
+	var username = document.getElementById('login-username').value;
+	var at = username.indexOf('@');
+	if (at === -1) {
+		return;
+	}
+	var domain = username.substring(at + 1);
+	fetchDNS("imaps", domain); /* Only look up IMAPS, not IMAP */
+	fetchDNS("submission", domain);
+});
 	</script>
 </body>
 </html>
