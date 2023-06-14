@@ -139,10 +139,10 @@ function addToFolderMenu(searchParams, parent, folder) {
 	}
 	if (folder.unseen === undefined) {
 		/* This is just the preliminary list */
-		li.innerHTML = "<span class='foldername'><a href='#'>" + folder.name + "</a></span>";
+		li.innerHTML = "<span class='foldername'><a href='#'>" + displayFolderName(folder) + "</a></span>";
 		li.addEventListener('click', function() { commandSelectFolder(folder.name, false); }, {passive: true});
 	} else {
-		li.innerHTML = "<span class='foldername" + (folder.unseen > 0 ? " folder-hasunread" : "") + "'>" + "<a href='#' title='" + folder.name + "'>" + folder.name + "<span class='folderunread'>" + (folder.unseen > 0 ? " (" + folder.unseen + ")" : "") + "</span></a></span><span class='foldercount'>" + folder.messages + "</span><span class='foldersize'>" + formatSize(folder.size, 0) + "</span>";
+		li.innerHTML = "<span class='foldername" + (folder.unseen > 0 ? " folder-hasunread" : "") + "'>" + "<a href='#' title='" + folder.name + "'>" + displayFolderName(folder) + "<span class='folderunread'>" + (folder.unseen > 0 ? " (" + folder.unseen + ")" : "") + "</span></a></span><span class='foldercount'>" + folder.messages + "</span><span class='foldersize'>" + formatSize(folder.size, 0) + "</span>";
 		li.addEventListener('click', function() { commandSelectFolder(folder.name, false); }, {passive: true});
 	}
 	parent.appendChild(li);
@@ -755,6 +755,26 @@ function moveToFrontByFlag(array, flag) {
 	}
 }
 
+function displayFolderName(folder) {
+	var name = folder.name;
+	if (folder.name.indexOf("INBOX") !== -1) { /* indexOf rather than exact match, so we catch subfolder INBOXes too */
+		name = "<span class='folder-icon'>&#128229;</span> " + name;
+	} else if (folder.flags.indexOf("Sent") !== -1) {
+		name = "<span class='folder-icon'>&#128228;</span> " + name;
+	} else if (folder.flags.indexOf("Trash") !== -1) {
+		name = "<span class='folder-icon'>&#128465;</span> " + name;
+	} else if (folder.flags.indexOf("Junk") !== -1) {
+		name = "<span class='folder-icon'>&#128293;</span> " + name;
+	} else if (folder.flags.indexOf("Drafts") !== -1) {
+		name = "<span class='folder-icon'>&#128240;</span> " + name;
+	} else if (folder.flags.indexOf("Archive") !== -1) {
+		name = "<span class='folder-icon'>&#128188;</span> " + name;
+	} else {
+		name = "<span class='folder-icon'>&#x1F5C0;</span> " + name;
+	}
+	return name;
+}
+
 ws.onmessage = function(e) {
 	var jsonData = JSON.parse(e.data);
 	console.log(jsonData);
@@ -817,7 +837,7 @@ ws.onmessage = function(e) {
 				 * and the second time with all the STATUS details.
 				 * Don't issue the SELECT until the second time, to avoid sending it twice. */
 				allowSelection = folders[name].unseen !== undefined;
-				moveto += "<option value='" + folders[name].name + "'>" + folders[name].name + "</option>";
+				moveto += "<option value='" + folders[name].name + "'>" + displayFolderName(folders[name]) + "</option>";
 			}
 
 			/* Now that folders are available (on page load), we can try to select the active one */

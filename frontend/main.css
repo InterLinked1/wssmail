@@ -57,6 +57,9 @@ a {
 	float: left;
 	/* padding-left: 5px; - nope, this shifts the message list UNDERNEATH */
 }
+.folder-icon {
+	font-size: 0.9em;
+}
 #messages {
 	width: calc(100% - 225px);
 	height: inherit;
