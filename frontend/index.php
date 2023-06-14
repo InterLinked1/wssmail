@@ -286,7 +286,7 @@ if (!isset($_SESSION['webmail'])) {
 			}
 			?>
 
-			<p style='text-align: center; font-weight: 500;'><a href="#" title="All webmail clients suck. This one just sucks less.">wssmail</a></p>
+			<p style='text-align: center; font-weight: 500;'><a href="https://github.com/InterLinked1/wssmail" title="All webmail clients suck. This one just sucks less.">wssmail</a></p>
 			<p style='text-align: center;'><i>All webmail clients suck. This one just sucks less.</i></p>
 			<?php
 			if (!isset($settings['login']['imap']['append'])) {
@@ -790,7 +790,7 @@ startHTML();
 		</div>
 	</div>
 	<div id="statusbar">
-		<p id="clientname"><a href="https://github.com/InterLinked1/wssmail" title="All webmail clients suck. This one just sucks less.">wssmail</a></p>
+		<p id="clientname"><a href="https://github.com/InterLinked1/wssmail" target="_blank" title="All webmail clients suck. This one just sucks less.">wssmail</a></p>
 		<p id='errorbar' class='error'></p>
 		<div id='status-right'>
 			<span id='uidnext' title='UIDNEXT'></span>

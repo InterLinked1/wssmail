@@ -740,8 +740,15 @@ function moveToFrontByName(array, name) {
 	}
 }
 
+var hierarchyDelimiter = undefined;
+
 function moveToFrontByFlag(array, flag) {
 	for (i = 0; i < array.length; i++) {
+		/* XXX Could do within subfolders as well, but for now limit to top-level folders so that it looks right */
+		/* If it contains the hierarchy delimiter, skip */
+		if (array[i].name.indexOf(hierarchyDelimiter) !== -1) {
+			continue;
+		}
 		if (array[i].flags.indexOf(flag) !== -1) {
 			array.unshift(array.splice(i, 1)[0]);
 		}
@@ -766,6 +773,10 @@ ws.onmessage = function(e) {
 			const searchParams = new URLSearchParams(url.search);
 			var allowSelection = false;
 			folders = jsonData.data;
+			hierarchyDelimiter = jsonData.delimiter;
+			if (hierarchyDelimiter === undefined) {
+				console.error("Hierarchy delimiter is undefined?");
+			}
 
 			/* Sort alphabetically first */
 			folders.sort(function(a, b) {
@@ -790,6 +801,14 @@ ws.onmessage = function(e) {
 			moveToFrontByFlag(folders, "Drafts");
 			/* INBOX at very top */
 			moveToFrontByName(folders, "INBOX");
+
+			/* XXX BUGBUG The above still really only works properly for top-level folders:
+			 * we also need to move any subfolders (for SPECIAL-USE)
+			 * Then again, SPECIAL-USE *typically* don't have any subfolders.
+			 * I only noticed this because I moved a folder to Trash,
+			 * and it showed up at the bottom, rather than right under Trash.
+			 * So not likely to be of much concern to most users... but "fix at some point"
+			 */
 
 			for (var name in folders) {
 				addToFolderMenu(searchParams, root_ul, folders[name]);
