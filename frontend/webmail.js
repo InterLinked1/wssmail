@@ -830,14 +830,35 @@ ws.onmessage = function(e) {
 			 * So not likely to be of much concern to most users... but "fix at some point"
 			 */
 
+			var totalsize = 0, totalmsg = 0, totalunread = 0;
+			var showtotal = false;
+
+			var total_li = document.createElement('li');
+			root_ul.appendChild(total_li);
+
 			for (var name in folders) {
+				if (folders[name].flags.indexOf("NoSelect") !== -1) {
+					/* If it's not Select'able, why show it? */
+					continue;
+				}
 				addToFolderMenu(searchParams, root_ul, folders[name]);
+				if (folders[name].unseen !== undefined) {
+					totalsize += folders[name].size;
+					totalmsg += folders[name].messages;
+					totalunread += folders[name].unseen;
+					showtotal = true;
+				}
 				/* We'll get a LIST response twice,
 				 * the first time with just folder names,
 				 * and the second time with all the STATUS details.
 				 * Don't issue the SELECT until the second time, to avoid sending it twice. */
 				allowSelection = folders[name].unseen !== undefined;
 				moveto += "<option value='" + folders[name].name + "'>" + displayFolderName(folders[name]) + "</option>";
+			}
+			if (showtotal) {
+				total_li.innerHTML = "<span class='foldername'><i>All Folders<span class='folderunread" + (totalunread > 0 ? " folder-hasunread" : "") + "'>" + (totalunread > 0 ? (" (" + totalunread + ")") : "") + "</i></span></a></span><span class='foldercount'>" + totalmsg + "</span><span class='foldersize'>" + formatSize(totalsize) + "</span>";
+			} else {
+				total_li.innerHTML = "<span class='foldername'><i>Loading&#133;</i></span>";
 			}
 
 			/* Now that folders are available (on page load), we can try to select the active one */
