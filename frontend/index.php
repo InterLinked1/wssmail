@@ -346,7 +346,7 @@ function setPreset(provider) {
 			echo " else if (provider === '" . $preset['name'] . "') {";
 			echo "autoconfigure(";
 			echo "'" . $preset['imap']['server'] . "', ";
-			echo $preset['imap']['security'] ? "true, " : "false, ";
+			echo $preset['imap']['security'] === 'tls' ? "true, " : "false, ";
 			echo $preset['imap']['port'] . ", ";
 			echo "'" . $preset['smtp']['server'] . "', ";
 			echo "'" . $preset['smtp']['security'] . "', ";
