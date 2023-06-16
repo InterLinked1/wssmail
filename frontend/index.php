@@ -33,6 +33,7 @@
  * Currently supported (standard) features:
  * - Basic message listing: subject, from, recipients, sent/received times, flagged status, attachment status, priority indication
  * - Basic message viewing, in plain text, HTML, or raw source mode
+ * - Faithful HTML rendering (Content Security Policy currently prevents this)
  * - Basic message operations (delete, move, mark read/unread), etc., including on multiple messages at a time
  * - Preview pane or open messages in separate tab
  * - Basic message composition of plain text emails.
@@ -50,18 +51,16 @@
  * - Sending format=flowed plain text messages
  *
  * Known issues:
- * - Folder list details and title do not update with new/expunged messages
+ * - Folder list details and title do not update with new/expunged messages (+marked as unread)
  * - Stay logged in "forever" does not work properly
  *
  * Not currently supported, but would be nice to have (future roadmap):
  * - Downloading/detaching/deleting attachments.
  * - Resuming or sending email drafts
- * - Faithful HTML rendering (Content Security Policy currently prevents this)
  * - Displaying messages grouped in threads
  * - Sorting, by date, and other attributes
  * - Update message list table when server implicitly marks messages as read
  * - Updating list of folders with updated counts/sizes as needed
- * - XSS/CSRF and other security considerations
  * - Searching, filtering (e.g. show only unread messages in a folder)
  * - Message flags/tags: adding, viewing, and removing
  * - Built-in ManageSieve client for managing Sieve filters: https://github.com/ProtonMail/libsieve-php

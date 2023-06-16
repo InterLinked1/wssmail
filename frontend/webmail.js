@@ -344,6 +344,7 @@ function adjustFolderCount(name, difftotal, diffunread) {
 			var folder = folders[f];
 			folder.messages += difftotal;
 			folder.unseen += diffunread;
+			setFolderTitle(folder.unseen); /* Update page title with new unread count */
 			drawFolderMenu(); /* Redraw folder list */
 			return;
 		}
@@ -467,6 +468,16 @@ function copyTo(newfolder) {
 	ws.send(payload);
 }
 
+function setFolderTitle(unread) {
+	var title = selectedFolder;
+	/* If there are unread messages, include that in the webpage title */
+	if (unread > 0) {
+		title += " (" + unread + ")";
+	}
+	document.title = title;
+	setq(null, null); /* Update URL */
+}
+
 function responseSelectFolder(folderinfo) {
 	endFolderView();
 	var folder = folderinfo.folder;
@@ -509,18 +520,12 @@ function responseSelectFolder(folderinfo) {
 		console.debug(folders);
 	} else {
 		var unread = folders[index].unseen;
-		/* If there are unread messages, include that in the webpage title */
-		if (unread > 0) {
-			title += " (" + unread + ")";
-		}
+		setFolderTitle(unread);
 	}
 
 	/* XXX If we do a FETCHLIST (e.g. on IDLE update), these aren't updated (UIDNEXT in particular, for EXISTS) */
 	document.getElementById('uidvalidity').textContent = folderinfo.uidvalidity;
 	document.getElementById('uidnext').textContent = folderinfo.uidnext + "+";
-
-	document.title = title;
-	setq(null, null); /* Update URL */
 }
 
 /* round = round to 1 decimal point. Default is round to 0 decimal pts */
@@ -962,6 +967,9 @@ ws.onmessage = function(e) {
 				msg = displayHeader(msg, "User-Agent", jsonData.useragent);
 				msg += "</div>";
 			}
+
+			var htmlframe = false;
+
 			if (!viewRaw && jsonData.contenttype !== undefined && jsonData.contenttype.length > 0 && jsonData.contenttype.indexOf("text/plain") !== -1) {
 				if (jsonData.contenttype.indexOf("format=flowed") !== -1) {
 					console.debug("Plain text flowed display");
@@ -972,7 +980,9 @@ ws.onmessage = function(e) {
 				}
 			} else if (viewHTML && jsonData.contenttype !== undefined && jsonData.contenttype.indexOf("text/html") !== -1) {
 				console.debug("HTML display");
-				msg += "<div class='msg-body html-body'>" + body + "</div>";
+				/* Use an iframe to display arbitrary HTML "safely" */
+				msg += "<div id='html-body' class='msg-body html-body'></div>";
+				htmlframe = true;
 			} else {
 				/* Fallback to display plain text anyways */
 				console.debug("Fallback display");
@@ -1031,6 +1041,16 @@ ws.onmessage = function(e) {
 				}
 				document.getElementById('previewpane').style.height = newheight + 'px';
 				console.debug("Preview pane height now: " + newheight);
+			}
+
+			if (htmlframe) {
+				/* htmlframe.contentWindow will be null until the frame is actually added to the DOM,
+				 * which is why we do that first here. */
+				var frame = document.createElement('iframe');
+				document.getElementById('html-body').appendChild(frame);
+				frame.contentWindow.document.open('text/html');
+				frame.contentWindow.document.write(body);
+				frame.contentWindow.document.close();
 			}
 
 			/* Display the message as seen in the message list */
