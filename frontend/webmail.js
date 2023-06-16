@@ -337,6 +337,48 @@ function forward() {
 	editor("Forward", '', '', '', 'Fwd: ' + lastsubject, fwdbody, lastmsgid, lastreferences);
 }
 
+function adjustFolderCount(name, difftotal, diffunread) {
+	console.log("Applying folder adjustment: " + name + " (" + difftotal + "/" + diffunread + ")");
+	for (var f in folders) {
+		if (folders[f].name === selectedFolder) {
+			var folder = folders[f];
+			folder.messages += difftotal;
+			folder.unseen += diffunread;
+			drawFolderMenu(); /* Redraw folder list */
+			return;
+		}
+	}
+	console.error("Couldn't find current folder (" + selectedFolder.name + ")in folder list?");
+}
+
+function implicitSeenUnseen(selected, markread) {
+	/* Mark seen or unseen locally */
+	var diffunread = 0;
+	for (var uididx in selected) {
+		var uid = selected[uididx];
+		console.log("Marking message " + (markread ? "read" : "unread") +  " locally: " + uid);
+		var tr = document.getElementById('msg-uid-' + uid);
+		if (markread) {
+			if (tr.classList.contains("messagelist-unread")) {
+				/* Only count if this is a change */
+				diffunread--;
+				tr.classList.remove("messagelist-unread");
+			}
+		} else {
+			if (!tr.classList.contains("messagelist-unread")) {
+				/* Only count if this is a change */
+				diffunread++;
+				tr.classList.add("messagelist-unread");
+			}
+		}
+	}
+	if (diffunread !== 0) {
+		adjustFolderCount(selectedFolder, 0, diffunread);
+	} else {
+		console.debug("No actual change in any counts");
+	}
+}
+
 function markUnread() {
 	var selected = getSelectedUIDs();
 	if (selected.length < 1) {
@@ -350,6 +392,7 @@ function markUnread() {
 	}
 	payload = JSON.stringify(payload);
 	ws.send(payload);
+	implicitSeenUnseen(selected, false);
 }
 
 function markRead() {
@@ -365,6 +408,7 @@ function markRead() {
 	}
 	payload = JSON.stringify(payload);
 	ws.send(payload);
+	implicitSeenUnseen(selected, true);
 }
 
 function deleteMessage() {
@@ -448,6 +492,7 @@ function responseSelectFolder(folderinfo) {
 	newfolder.classList.add("folder-current");
 	console.log("Selecting folder: " + folder);
 	setq('folder', folder);
+	selectedFolder = folder;
 	var title = folder;
 
 	var index = -1;
@@ -775,6 +820,50 @@ function displayFolderName(folder) {
 	return name;
 }
 
+function drawFolderMenu() {
+	document.getElementById('folders').innerHTML = ''; /* Delete any old ones */
+	var root_ul = document.createElement('ul');
+	document.getElementById('folders').appendChild(root_ul);
+
+	console.debug("Drawing or redrawing folder list");
+
+	/* XXX BUGBUG The above still really only works properly for top-level folders:
+	 * we also need to move any subfolders (for SPECIAL-USE)
+	 * Then again, SPECIAL-USE *typically* don't have any subfolders.
+	 * I only noticed this because I moved a folder to Trash,
+	 * and it showed up at the bottom, rather than right under Trash.
+	 * So not likely to be of much concern to most users... but "fix at some point"
+	 */
+
+	var totalsize = 0, totalmsg = 0, totalunread = 0;
+	var showtotal = false;
+
+	var total_li = document.createElement('li');
+	root_ul.appendChild(total_li);
+
+	var url = new URL(window.location.href);
+	const searchParams = new URLSearchParams(url.search);
+
+	for (var name in folders) {
+		if (folders[name].flags.indexOf("NoSelect") !== -1) {
+			/* If it's not Select'able, why show it? */
+			continue;
+		}
+		addToFolderMenu(searchParams, root_ul, folders[name]);
+		if (folders[name].unseen !== undefined) {
+			totalsize += folders[name].size;
+			totalmsg += folders[name].messages;
+			totalunread += folders[name].unseen;
+			showtotal = true;
+		}
+	}
+	if (showtotal) {
+		total_li.innerHTML = "<span class='foldername'><i>All Folders<span class='folderunread" + (totalunread > 0 ? " folder-hasunread" : "") + "'>" + (totalunread > 0 ? (" (" + totalunread + ")") : "") + "</i></span></a></span><span class='foldercount'>" + totalmsg + "</span><span class='foldersize'>" + formatSize(totalsize) + "</span>";
+	} else {
+		total_li.innerHTML = "<span class='foldername'><i>Loading&#133;</i></span>";
+	}
+}
+
 ws.onmessage = function(e) {
 	var jsonData = JSON.parse(e.data);
 	console.log(jsonData);
@@ -784,13 +873,8 @@ ws.onmessage = function(e) {
 			setError(jsonData.msg);
 		} else if (response === "LIST") {
 			gotlist = true;
-			document.getElementById('folders').innerHTML = ''; /* Delete any old ones */
 			var moveto = "<option value=''></option>"; /* Start it off with an empty option */
 
-			var root_ul = document.createElement('ul');
-			document.getElementById('folders').appendChild(root_ul);
-			var url = new URL(window.location.href);
-			const searchParams = new URLSearchParams(url.search);
 			var allowSelection = false;
 			folders = jsonData.data;
 			hierarchyDelimiter = jsonData.delimiter;
@@ -822,31 +906,11 @@ ws.onmessage = function(e) {
 			/* INBOX at very top */
 			moveToFrontByName(folders, "INBOX");
 
-			/* XXX BUGBUG The above still really only works properly for top-level folders:
-			 * we also need to move any subfolders (for SPECIAL-USE)
-			 * Then again, SPECIAL-USE *typically* don't have any subfolders.
-			 * I only noticed this because I moved a folder to Trash,
-			 * and it showed up at the bottom, rather than right under Trash.
-			 * So not likely to be of much concern to most users... but "fix at some point"
-			 */
-
-			var totalsize = 0, totalmsg = 0, totalunread = 0;
-			var showtotal = false;
-
-			var total_li = document.createElement('li');
-			root_ul.appendChild(total_li);
-
+			drawFolderMenu();
 			for (var name in folders) {
 				if (folders[name].flags.indexOf("NoSelect") !== -1) {
 					/* If it's not Select'able, why show it? */
 					continue;
-				}
-				addToFolderMenu(searchParams, root_ul, folders[name]);
-				if (folders[name].unseen !== undefined) {
-					totalsize += folders[name].size;
-					totalmsg += folders[name].messages;
-					totalunread += folders[name].unseen;
-					showtotal = true;
 				}
 				/* We'll get a LIST response twice,
 				 * the first time with just folder names,
@@ -854,11 +918,6 @@ ws.onmessage = function(e) {
 				 * Don't issue the SELECT until the second time, to avoid sending it twice. */
 				allowSelection = folders[name].unseen !== undefined;
 				moveto += "<option value='" + folders[name].name + "'>" + displayFolderName(folders[name]) + "</option>";
-			}
-			if (showtotal) {
-				total_li.innerHTML = "<span class='foldername'><i>All Folders<span class='folderunread" + (totalunread > 0 ? " folder-hasunread" : "") + "'>" + (totalunread > 0 ? (" (" + totalunread + ")") : "") + "</i></span></a></span><span class='foldercount'>" + totalmsg + "</span><span class='foldersize'>" + formatSize(totalsize) + "</span>";
-			} else {
-				total_li.innerHTML = "<span class='foldername'><i>Loading&#133;</i></span>";
 			}
 
 			/* Now that folders are available (on page load), we can try to select the active one */
@@ -974,8 +1033,8 @@ ws.onmessage = function(e) {
 				console.debug("Preview pane height now: " + newheight);
 			}
 
-			/* XXX Known issue, since the backend auto marks as seen, and there is no new FETCHLIST,
-			 * it appears that it's still unread until entire page is refreshed */
+			/* Display the message as seen in the message list */
+			implicitSeenUnseen(getSelectedUIDs(), true);
 		} else if (response === "EXISTS") {
 			notifyNewMessage(jsonData);
 			/* XXX Along with IDLE updates, we really want to update the page title with the new unread count!!!!
