@@ -422,7 +422,7 @@ document.getElementById('lookup-btn').addEventListener('click', function() {
 /* Send Content-Security-Policy - help protect against injections from HTML emails, in modern browsers at least */
 /* Note that connect-src: 'self' is incorrect because the scheme is different (either ws or wss)
  * Therefore, we have to build that manually */
-$wsSource = ($_SERVER['https'] ? "wss://" : "ws://") . $_SERVER['SERVER_NAME'] . ":" . $_SERVER['SERVER_PORT'];
+$wsSource = ($_SERVER['HTTPS'] ? "wss://" : "ws://") . $_SERVER['SERVER_NAME'] . ":" . $_SERVER['SERVER_PORT'];
 header("Content-Security-Policy: default-src 'none'; base-uri 'none'; frame-ancestors 'self'; object-src 'self'; child-src 'none'; frame-src 'none'; img-src https: data:; worker-src 'none'; media-src 'self'; connect-src $wsSource; font-src 'self'; style-src 'self'; script-src 'self'; report-to default;");
 
 function addAddresses($mail, $header, $s) {

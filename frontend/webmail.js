@@ -7,6 +7,7 @@ var checkedNotifyPerm = false;
 
 var folders = null;
 var gotlist = false;
+var trashFolder = null;
 
 var viewPreview = true;
 var selectedFolder = null;
@@ -412,9 +413,84 @@ function markRead() {
 	implicitSeenUnseen(selected, true);
 }
 
+function calculateTrashFolder() {
+	/* Determine what the right Trash folder is, based on the currently selected mailbox */
+	trashFolder = null;
+	var requiredPrefix = "";
+	var index = 0;
+	if (selectedFolder === null) {
+		console.error("No source mailbox currently active");
+		return;
+	}
+	/* XXX These namespace names are the most common but should not be hardcoded, but rather returned in the LIST response */
+	if (selectedFolder.startsWith("Other Users.")) {
+		/* Other Users. = length 12 */
+		var secondLevel = selectedFolder.substring(12);
+		index = secondLevel.indexOf(hierarchyDelimiter);
+		if (index === -1) {
+			console.error("Selected folder has unexpected name: " + secondLevel);
+			return;
+		}
+		index += 12;
+	} else if (selectedFolder.startsWith("Shared Folders.")) {
+		var secondLevel = selectedFolder.substring(14);
+		index = secondLevel.indexOf(hierarchyDelimiter);
+		if (index === -1) {
+			console.error("Selected folder has unexpected name: " + secondLevel);
+			return;
+		}
+		index += 14;
+	}
+	if (index > 0) {
+		index++; /* For the 2nd hierarchy delimiter */
+		requiredPrefix = selectedFolder.substring(0, index);
+	}
+	for (i = 0; i < folders.length; i++) {
+		if (index > 0) {
+			if (!folders[i].name.startsWith(requiredPrefix)) {
+				continue;
+			}
+		} else {
+			if (folders[i].name.startsWith("Other Users.") || folders[i].name.startsWith("Shared Folders.")) {
+				/* If it's not in another namespace, then the Trash folder won't be found in another namespace either */
+				continue;
+			}
+		}
+		var subname = folders[i].name.substring(index);
+
+		/* Only use the name if we don't have one yet. Otherwise, it has to have the SPECIAL-USE flag.
+		 * This supports servers that don't use SPECIAL-USE attributes, but prioritizes those. */
+		if (folders[i].flags.indexOf("Trash") != -1) {
+			if (trashFolder === null) {
+				console.debug("Best candidate trash folder: " + folders[i].name);
+			} else {
+				console.debug("Better candidate trash folder: " + folders[i].name);
+			}
+			trashFolder = folders[i].name;
+			break;
+		} else if (trashFolder === null && subname === "Trash") {
+			console.debug("Acceptable candidate trash folder: " + folders[i].name);
+			trashFolder = folders[i].name;
+			/* Keep trying for a better match */
+		}
+	}
+	if (trashFolder === null) {
+		console.error("No suitable trash folder found for this mailbox?");
+	}
+}
+
 function deleteMessage() {
 	/* Don't actually do an IMAP delete (add Deleted flag and expunge), just move to the Trash folder */
-	moveTo("Trash"); /* XXX What if the trash folder isn't called Trash? Need to figure out from LIST SPECIAL-USE */
+	if (!trashFolder) {
+		setError("No trash folder found for current mailbox");
+		return;
+	} else if (trashFolder === selectedFolder) {
+		/* XXX This should automatically set the Deleted flag on all messages, then EXPUNGE them instead?
+		 * But this is a destructive action, so should really confirm that's what the user wants to do. */
+		setError("Can't move message to same folder (already in trash folder)");
+		return;
+	}
+	moveTo(trashFolder);
 }
 
 function move() {
@@ -519,13 +595,21 @@ function responseSelectFolder(folderinfo) {
 		console.debug("Valid folders: ");
 		console.debug(folders);
 	} else {
-		var unread = folders[index].unseen;
-		setFolderTitle(unread);
+		/* Update counts when we SELECT a mailbox, since we get this info for free */
+		/* However, we only get the # of total messages, not # unread, so we can't update that. */
+		if (folders[index].messages !== folderinfo.exists) {
+			folders[index].messages = folderinfo.exists;
+			drawFolderMenu(); /* Redraw menu if totals changed */
+		}
+		setFolderTitle(folders[index].unseen);
 	}
 
 	/* XXX If we do a FETCHLIST (e.g. on IDLE update), these aren't updated (UIDNEXT in particular, for EXISTS) */
 	document.getElementById('uidvalidity').textContent = folderinfo.uidvalidity;
 	document.getElementById('uidnext').textContent = folderinfo.uidnext + "+";
+
+	/* Determine what the right mailbox to move messages to is for "Delete" operations */
+	calculateTrashFolder();
 }
 
 /* round = round to 1 decimal point. Default is round to 0 decimal pts */
