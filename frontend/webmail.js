@@ -1130,8 +1130,13 @@ ws.onmessage = function(e) {
 			if (htmlframe) {
 				/* htmlframe.contentWindow will be null until the frame is actually added to the DOM,
 				 * which is why we do that first here. */
-				var frame = document.createElement('iframe');
-				document.getElementById('html-body').appendChild(frame);
+				if (viewPreview) {
+					var frame = document.createElement('iframe');
+					document.getElementById('html-body').appendChild(frame);
+				} else {
+					var frame = tab.document.createElement('iframe');
+					tab.document.getElementById('html-body').appendChild(frame);
+				}
 				frame.contentWindow.document.open('text/html');
 				frame.contentWindow.document.write(body);
 				frame.contentWindow.document.close();
