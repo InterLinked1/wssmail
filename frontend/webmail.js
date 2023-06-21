@@ -17,6 +17,8 @@ console.log("Screen height: " + window.screen.height);
 var pagesize = window.screen.height > 800 ? 25 : window.screen.height > 600 ? 15 : 10;
 var viewRaw = false;
 var viewHTML = true;
+var allowExternalRequests = false;
+
 var currentUID = 0;
 
 /* For replies */
@@ -52,6 +54,15 @@ function toggleHTML(elem) {
 	viewHTML = elem.checked;
 	document.getElementById("option-html").checked = viewHTML;
 	setq('html', viewHTML ? "yes" : "no");
+	if (viewPreview) {
+		reloadCurrentMessage();
+	}
+}
+
+function toggleExternalRequests(elem) {
+	allowExternalRequests = elem.checked;
+	document.getElementById("option-extreq").checked = allowExternalRequests;
+	setq('extreq', allowExternalRequests ? "yes" : "no");
 	if (viewPreview) {
 		reloadCurrentMessage();
 	}
@@ -102,6 +113,12 @@ ws.onopen = function(e) {
 		viewHTML = q === "yes";
 	}
 	document.getElementById("option-html").checked = viewHTML;
+
+	q = searchParams.get("extreq");
+	if (q !== undefined && q !== null) {
+		allowExternalRequests = q === "yes";
+	}
+	document.getElementById("option-extreq").checked = allowExternalRequests;
 
 	q = searchParams.get("raw");
 	if (q !== undefined && q !== null) {
@@ -1139,7 +1156,24 @@ ws.onmessage = function(e) {
 					var frame = tab.document.createElement('iframe');
 					tab.document.getElementById('html-body').appendChild(frame);
 				}
+				frame.setAttribute("sandbox", "");
 				frame.contentWindow.document.open('text/html');
+				if (!allowExternalRequests) {
+					frame.setAttribute("csp", "default-src 'none'; img-src 'none';"); /* XXX Doesn't have any effect, so use a CSP instead: */
+
+					/* unsafe-inline isn't unsafe here, it's actually exactly what we want.
+					 * Load any resources in the content itself, and prohibit making any external requests.
+					 * This will prevent tracking, etc. since no external requests can be made,
+					 * and it can be a big bandwidth saver too. */
+					var csp = "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'self' 'unsafe-inline';\">";
+					/* The meta tag must be inserted inside the head tag or it will be ignored */
+					var head = body.indexOf("<head>");
+					if (head !== -1) {
+						body = body.substring(0, head) + "<head>" + csp + body.substring(head + 6);
+					} else {
+						body = "<head>" + csp + "</head>" + body;
+					}
+				}
 				frame.contentWindow.document.write(body);
 				frame.contentWindow.document.close();
 			}
@@ -1328,4 +1362,5 @@ document.getElementById('btn-copy').addEventListener('click', copy);
 document.getElementById('option-pagesize').addEventListener('change', function() { setPageSize(this.value); }, {passive: true});
 document.getElementById('option-preview').addEventListener('change', function() { togglePreview(this); }, {passive: true});
 document.getElementById('option-html').addEventListener('change', function() { toggleHTML(this); }, {passive: true});
+document.getElementById('option-extreq').addEventListener('change', function() { toggleExternalRequests(this); }, {passive: true});
 document.getElementById('option-raw').addEventListener('change', function() { toggleRaw(this); }, {passive: true});

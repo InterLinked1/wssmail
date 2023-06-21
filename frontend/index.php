@@ -46,6 +46,7 @@
  * - Attaching attachments
  * - Save copies of sent messages to Sent folder (via IMAP APPEND)
  * - Content Security Policy to mitigate CSS and JS injection in modern browsers
+ * - Control whether HTML emails are allowed to load remote content
  *
  * Very nearly supported:
  * - Sending format=flowed plain text messages
@@ -764,6 +765,7 @@ startHTML();
 			</select>
 			<label for="option-preview" title="Enable or disable the message preview pane. If disabled, messages will open in a separate tab.">Preview</label><input id="option-preview" type="checkbox"/>
 			<label for="option-html" title="Enable or disable HTML message viewing. If disabled, all messages will be displayed in plain text. Composed messages are always sent as plain text.">HTML</label><input id="option-html" type="checkbox"/>
+			<label for="option-extreq" title="Allow HTML emails to load remote content. This allows HTML emails to make external requests, which may consume more bandwidth and allow senders to track you.">&#127760;</label><input id="option-extreq" type="checkbox"/>
 			<label for="option-raw" title="View raw message source">Raw</label><input id="option-raw" type="checkbox"/>
 			<form target="" method="post">
 				<input type="submit" name="logout" value="Logout" />
