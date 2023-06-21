@@ -430,6 +430,21 @@ function markRead() {
 	implicitSeenUnseen(selected, true);
 }
 
+function markDeleted() {
+	var selected = getSelectedUIDs();
+	if (selected.length < 1) {
+		setError("No messages currently selected!");
+		return;
+	}
+	console.log("Mark messages as deleted");
+	var payload = {
+		command: "DELETE",
+		uids: selected
+	}
+	payload = JSON.stringify(payload);
+	ws.send(payload);
+}
+
 function calculateTrashFolder() {
 	/* Determine what the right Trash folder is, based on the currently selected mailbox */
 	trashFolder = null;
@@ -500,14 +515,31 @@ function deleteMessage() {
 	/* Don't actually do an IMAP delete (add Deleted flag and expunge), just move to the Trash folder */
 	if (!trashFolder) {
 		setError("No trash folder found for current mailbox");
-		return;
 	} else if (trashFolder === selectedFolder) {
-		/* XXX This should automatically set the Deleted flag on all messages, then EXPUNGE them instead?
-		 * But this is a destructive action, so should really confirm that's what the user wants to do. */
-		setError("Can't move message to same folder (already in trash folder)");
+		/* It's already in the appropriate Trash folder.
+		 * Now, set the \Deleted flag on the message, to prepare for the EXPUNGE.
+		 * The user can then expunge the mailbox in a separate action.
+		 */
+		markDeleted();
+	} else {
+		moveTo(trashFolder);
+	}
+}
+
+function expungeFolder() {
+	if (confirm("WARNING:\nALL messages marked as 'Deleted' will be PERMANENTLY deleted!\nContinue?") !== true) {
+		return; /* User cancelled expunge */
+	}
+	if (selectedFolder === null) {
+		setError("No folder currently active!");
 		return;
 	}
-	moveTo(trashFolder);
+	console.log("Expunding messages in folder " + selectedFolder);
+	var payload = {
+		command: "EXPUNGE"
+	}
+	payload = JSON.stringify(payload);
+	ws.send(payload);
 }
 
 function move() {
@@ -613,7 +645,8 @@ function responseSelectFolder(folderinfo) {
 		console.debug(folders);
 	} else {
 		/* Update counts when we SELECT a mailbox, since we get this info for free */
-		/* However, we only get the # of total messages, not # unread, so we can't update that. */
+		/* XXX However, we only get the # of total messages, not # unread, so we can't update that.
+		 * Maybe server could silently do a STATUS to get # unread and send us the # unread? */
 		if (folders[index].messages !== folderinfo.exists) {
 			folders[index].messages = folderinfo.exists;
 			drawFolderMenu(); /* Redraw menu if totals changed */
@@ -1192,7 +1225,7 @@ ws.onmessage = function(e) {
 			} else {
 				endMessagePreview(); /* Stop preview of old message */
 			}
-			document.getElementById('messagetable').innerHTML = '<tr><th></th><th>#</th><th>UID &#9660;</th><th></th><th></th><th></th><th>Subject</th><th>From</th><th>Recipient</th><th>Received</th><th>Sent</th><th>Size</th></tr>'; /* First, clear any existing */
+			document.getElementById('messagetable').innerHTML = '<tr><th></th><th>#</th><th>UID &#9660;</th><th></th><th></th><th></th><th></th><th>Subject</th><th>From</th><th>Recipient</th><th>Received</th><th>Sent</th><th>Size</th></tr>'; /* First, clear any existing */
 			/* Construct message list table */
 			setQuota(jsonData.quota, jsonData.quotaused);
 			var epoch = Date.now();
@@ -1238,6 +1271,10 @@ ws.onmessage = function(e) {
 
 				td = document.createElement('td');
 				td.innerHTML = flags.includes("\\Flagged") ? "&#9873;" : "";
+				tr.appendChild(td);
+
+				td = document.createElement('td');
+				td.innerHTML = flags.includes("\\Deleted") ? "&#128465;" : "";
 				tr.appendChild(td);
 
 				td = document.createElement('td');
@@ -1356,6 +1393,7 @@ document.getElementById('btn-forward').addEventListener('click', forward);
 document.getElementById('btn-markunread').addEventListener('click', markUnread);
 document.getElementById('btn-markread').addEventListener('click', markRead);
 document.getElementById('btn-delete').addEventListener('click', deleteMessage);
+document.getElementById('btn-expunge').addEventListener('click', expungeFolder);
 document.getElementById('btn-move').addEventListener('click', move);
 document.getElementById('btn-copy').addEventListener('click', copy);
 

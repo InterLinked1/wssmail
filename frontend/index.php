@@ -34,7 +34,7 @@
  * - Basic message listing: subject, from, recipients, sent/received times, flagged status, attachment status, priority indication
  * - Basic message viewing, in plain text, HTML, or raw source mode
  * - Faithful HTML rendering (Content Security Policy currently prevents this)
- * - Basic message operations (delete, move, mark read/unread), etc., including on multiple messages at a time
+ * - Basic message operations (move, mark read/unread, delete, expunge), etc., including on multiple messages at a time
  * - Preview pane or open messages in separate tab
  * - Basic message composition of plain text emails.
  * - Mailbox ordering based on LIST response, including RFC 6154 SPECIAL USE attributes
@@ -740,6 +740,7 @@ startHTML();
 			<input id="btn-markread" type="button" value="Mark Read"/>
 			&nbsp;
 			<input id="btn-delete" type="button" value="Delete"/>
+			<input id="btn-expunge" type="button" value="Expunge"/>
 			<select id="option-moveto" name="option-moveto">
 				<!-- Dynamically populated with folders -->
 			</select>
