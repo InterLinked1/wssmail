@@ -1092,7 +1092,9 @@ ws.onmessage = function(e) {
 
 			if (!viewPreview) {
 				/* If we're not actually using the preview pane, put it in a new tab */
-				var childhtml = "<html><head><title>" + (jsonData.subject !== undefined ? jsonData.subject : "(no subject)") + "</title><link rel='stylesheet' type='text/css' href='style.css'><link rel='stylesheet' type='text/css' href='message.css'></head><body>";
+				var childhtml = "<html><head>";
+				childhtml += "<title>" + (jsonData.subject !== undefined ? jsonData.subject : "(no subject)") + "</title>";
+				childhtml += "<link rel='stylesheet' type='text/css' href='style.css'><link rel='stylesheet' type='text/css' href='message.css'></head><body>";
 				childhtml += (viewRaw || !viewHTML) ? "<div class='plaintext'>" : "<div>";
 				childhtml += msg;
 				childhtml += "</div>";

@@ -420,10 +420,12 @@ document.getElementById('lookup-btn').addEventListener('click', function() {
 /* Past this point, we are logged in */
 
 /* Send Content-Security-Policy - help protect against injections from HTML emails, in modern browsers at least */
-/* Note that connect-src: 'self' is incorrect because the scheme is different (either ws or wss)
+/* Note that connect-src: 'self' is incorrect because the scheme is different (either ws or wss).
  * Therefore, we have to build that manually */
 $wsSource = ($_SERVER['HTTPS'] ? "wss://" : "ws://") . $_SERVER['SERVER_NAME'] . ":" . $_SERVER['SERVER_PORT'];
-header("Content-Security-Policy: default-src 'none'; base-uri 'none'; frame-ancestors 'self'; object-src 'self'; child-src 'none'; frame-src 'none'; img-src https: data:; worker-src 'none'; media-src 'self'; connect-src $wsSource; font-src 'self'; style-src 'self'; script-src 'self'; report-to default;");
+/* Need to explicitly refer to the current host, for child tabs that are created (since they are about:blank, which is not our current host.) */
+$pgSource = ($_SERVER['HTTPS'] ? "https://" : "http://") . $_SERVER['SERVER_NAME'] . ":" . $_SERVER['SERVER_PORT'];
+header("Content-Security-Policy: default-src 'none'; base-uri 'none'; frame-ancestors 'self' $pgSource; object-src 'self'; child-src 'self' $pgSource; frame-src 'none'; img-src https: data:; worker-src 'none'; media-src 'self'; connect-src $wsSource; font-src 'self'; style-src 'self' $pgSource 'unsafe-inline'; script-src 'self' $pgSource; report-to default;");
 
 function addAddresses($mail, $header, $s) {
 	$addresses = explode(',', $s); /* XXX ideally, delimit on either , or ; - but the RFC says , is the right one */
