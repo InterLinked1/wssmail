@@ -8,6 +8,7 @@ var checkedNotifyPerm = false;
 var folders = null;
 var gotlist = false;
 var trashFolder = null;
+var junkFolder = null;
 
 var viewPreview = true;
 var selectedFolder = null;
@@ -446,9 +447,9 @@ function markDeleted() {
 	ws.send(payload);
 }
 
-function calculateTrashFolder() {
-	/* Determine what the right Trash folder is, based on the currently selected mailbox */
-	trashFolder = null;
+function calculateSpecialFolder(spname) {
+	var spfolder = null;
+	/* Determine what the right folder is, based on the currently selected mailbox */
 	var requiredPrefix = "";
 	var index = 0;
 	if (selectedFolder === null) {
@@ -493,23 +494,33 @@ function calculateTrashFolder() {
 
 		/* Only use the name if we don't have one yet. Otherwise, it has to have the SPECIAL-USE flag.
 		 * This supports servers that don't use SPECIAL-USE attributes, but prioritizes those. */
-		if (folders[i].flags.indexOf("Trash") != -1) {
-			if (trashFolder === null) {
-				console.debug("Best candidate trash folder: " + folders[i].name);
+		if (folders[i].flags.indexOf(spname) != -1) {
+			if (spfolder === null) {
+				console.debug("Best candidate " + spname + " folder: " + folders[i].name);
 			} else {
-				console.debug("Better candidate trash folder: " + folders[i].name);
+				console.debug("Better candidate " + spname + " folder: " + folders[i].name);
 			}
-			trashFolder = folders[i].name;
+			spfolder = folders[i].name;
 			break;
-		} else if (trashFolder === null && subname === "Trash") {
-			console.debug("Acceptable candidate trash folder: " + folders[i].name);
-			trashFolder = folders[i].name;
+		} else if (spfolder === null && subname === spname) {
+			console.debug("Acceptable candidate " + spname + " folder: " + folders[i].name);
+			spfolder = folders[i].name;
 			/* Keep trying for a better match */
 		}
 	}
-	if (trashFolder === null) {
-		console.error("No suitable trash folder found for this mailbox?");
+	if (spfolder === null) {
+		console.error("No suitable " + spname + " folder found for this mailbox?");
 	}
+	return spfolder;
+}
+
+function calculateTrashFolder() {
+	/* Determine what the right Trash folder is, based on the currently selected mailbox */
+	trashFolder = calculateSpecialFolder("Trash");
+}
+
+function calculateJunkFolder() {
+	junkFolder = calculateSpecialFolder("Junk");
 }
 
 function deleteMessage() {
@@ -524,6 +535,17 @@ function deleteMessage() {
 		markDeleted();
 	} else {
 		moveTo(trashFolder);
+	}
+}
+
+function junkMessage() {
+	/* Don't actually do an IMAP delete (add Deleted flag and expunge), just move to the Trash folder */
+	if (!junkFolder) {
+		setError("No junk folder found for current mailbox");
+	} else if (junkFolder === selectedFolder) {
+		setError("Message already in junk folder");
+	} else {
+		moveTo(junkFolder);
 	}
 }
 
@@ -672,8 +694,9 @@ function responseSelectFolder(folderinfo) {
 	document.getElementById('uidvalidity').textContent = folderinfo.uidvalidity;
 	document.getElementById('uidnext').textContent = folderinfo.uidnext + "+";
 
-	/* Determine what the right mailbox to move messages to is for "Delete" operations */
+	/* Determine what the right mailbox to move messages to is for "Delete" and "Junk" operations */
 	calculateTrashFolder();
+	calculateJunkFolder();
 }
 
 /* round = round to 1 decimal point. Default is round to 0 decimal pts */
@@ -1434,6 +1457,7 @@ document.getElementById('btn-replyall').addEventListener('click', replyAll);
 document.getElementById('btn-forward').addEventListener('click', forward);
 document.getElementById('btn-markunread').addEventListener('click', markUnread);
 document.getElementById('btn-markread').addEventListener('click', markRead);
+document.getElementById('btn-junk').addEventListener('click', junkMessage);
 document.getElementById('btn-delete').addEventListener('click', deleteMessage);
 document.getElementById('btn-expunge').addEventListener('click', expungeFolder);
 document.getElementById('btn-move').addEventListener('click', move);

@@ -740,6 +740,7 @@ startHTML();
 			<input id="btn-markunread" type="button" title="Mark Unread" value="&#128233;"/>
 			<input id="btn-markread" type="button" title="Mark Read" value="&#9993;"/>
 			&nbsp;
+			<input id="btn-junk" type="button" title="Junk" value="&#128293;"/>
 			<input id="btn-delete" type="button" title="Delete" value="&#10060;"/>
 			<input id="btn-expunge" type="button" value="Expunge"/>
 			<select id="option-moveto" name="option-moveto">
