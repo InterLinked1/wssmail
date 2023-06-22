@@ -779,12 +779,12 @@ function setQuota(total, used) {
 function formatPT(body) {
 	/* pseudo formatting for plain text: bold, italics, underline, and hyperlinks */
 	body = escapeHTML(body); /* First, make sure plain text won't get turned into HTML */
-	/* XXX BUGBUG TODO Don't mess with these when they appear in links or are not the start/end of a word */
 
 	/* Do italics first since / appears in HTML tags (which we'll be adding to the body) */
-	body = body.replace(/\/(\S[^\/]+\S)\//g, "<i>$1</i>");
-	body = body.replace(/\*(\S[^\*]+\S)\*/g, "<b>$1</b>");
-	body = body.replace(/\_(\S[^\_]+\S)\_/g, "<u>$1</u>");
+	/* Require whitespace before match (\s), to avoid matching URLs with a request URI component */
+	body = body.replace(/\s\/(\S[^\/]+\S)\//g, "<i>$1</i>");
+	body = body.replace(/\s\*(\S[^\*]+\S)\*/g, "<b>$1</b>");
+	body = body.replace(/\s\_(\S[^\_]+\S)\_/g, "<u>$1</u>");
 
 	/* Make links hyperlinks */
 	var urlRegex = /(https?:\/\/[^\s]+)/g;
