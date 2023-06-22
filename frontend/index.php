@@ -29,6 +29,7 @@
  * - Advanced message operations: copying messages to other mailboxes.
  * - RFC 2177 IMAP IDLE (realtime notifications)
  * - RFC 6186 autoconfiguration
+ * - Raw message downloading (exporting)
  *
  * Currently supported (standard) features:
  * - Basic message listing: subject, from, recipients, sent/received times, flagged status, attachment status, priority indication
@@ -768,6 +769,7 @@ startHTML();
 			<label for="option-html" title="Enable or disable HTML message viewing. If disabled, all messages will be displayed in plain text. Composed messages are always sent as plain text.">HTML</label><input id="option-html" type="checkbox"/>
 			<label for="option-extreq" title="Allow HTML emails to load remote content. This allows HTML emails to make external requests, which may consume more bandwidth and allow senders to track you.">&#127760;</label><input id="option-extreq" type="checkbox"/>
 			<label for="option-raw" title="View raw message source">Raw</label><input id="option-raw" type="checkbox"/>
+			<b><input type="button" id="btn-download" title="Download (Export)" value="&#10149;" /></b> <!-- Also &#128233; -->
 			<form target="" method="post">
 				<input type="submit" name="logout" value="Logout" />
 			</form>

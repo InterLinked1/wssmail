@@ -20,6 +20,7 @@ var viewHTML = true;
 var allowExternalRequests = false;
 
 var currentUID = 0;
+var doingExport = false;
 
 /* For replies */
 var lastfrom = null;
@@ -593,6 +594,19 @@ function copyTo(newfolder) {
 	ws.send(payload);
 }
 
+function exportMessage() {
+	if (!(currentUID > 0)) {
+		setError("No message currently selected");
+		return;
+	}
+	/* XXX Optimization: only redownload if we don't already have the raw source */
+	doingExport = true;
+	var oldRaw = viewRaw;
+	viewRaw = true; /* Get raw source, regardless of current setting */
+	commandFetchMessage(currentUID);
+	viewRaw = oldRaw; /* Restore */
+}
+
 function setFolderTitle(unread) {
 	var title = selectedFolder;
 	/* If there are unread messages, include that in the webpage title */
@@ -1003,6 +1017,21 @@ function drawFolderMenu() {
 	}
 }
 
+function doDownload(filename, content) {
+    var blob = new Blob([content], {type: 'application/octet-stream'});
+    if (window.navigator && window.navigator.msSaveOrOpenBlob) {
+        window.navigator.msSaveOrOpenBlob(blob, filename);
+    } else{
+        var e = document.createEvent('MouseEvents'),
+        a = document.createElement('a');
+        a.download = filename;
+        a.href = window.URL.createObjectURL(blob);
+        a.dataset.downloadurl = ['text/plain', a.download, a.href].join(':');
+        e.initEvent('click', true, false, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
+        a.dispatchEvent(e);
+    }
+}
+
 ws.onmessage = function(e) {
 	var jsonData = JSON.parse(e.data);
 	console.log(jsonData);
@@ -1070,6 +1099,13 @@ ws.onmessage = function(e) {
 			pageNumber = 1; /* Reset to 1 whenever we successfully move to a new folder */
 			responseSelectFolder(jsonData);
 		} else if (response === "FETCH") {
+			if (doingExport) {
+				doingExport = false;
+				/* Download the message */
+				var filename = (lastsubject !== undefined ? lastsubject : jsonData.uid) + ".eml";
+				doDownload(filename, jsonData.body);
+				return;
+			}
 			endMessagePreview(); /* Stop preview of old message */
 
 			/* Put message in message preview pane */
@@ -1402,6 +1438,7 @@ document.getElementById('btn-delete').addEventListener('click', deleteMessage);
 document.getElementById('btn-expunge').addEventListener('click', expungeFolder);
 document.getElementById('btn-move').addEventListener('click', move);
 document.getElementById('btn-copy').addEventListener('click', copy);
+document.getElementById('btn-download').addEventListener('click', exportMessage);
 
 document.getElementById('option-pagesize').addEventListener('change', function() { setPageSize(this.value); }, {passive: true});
 document.getElementById('option-preview').addEventListener('change', function() { togglePreview(this); }, {passive: true});
