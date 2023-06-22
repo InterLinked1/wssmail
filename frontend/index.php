@@ -727,20 +727,20 @@ startHTML();
 ?>
 	<div id="menu">
 		<div id="menu-left">
-			<p><a href='?' title="All webmail clients suck. This one just sucks less.">Webmail</a> || 
-			<a id="reload" href="#" title="Reload current mailbox">&#8635; Reload</a></p>
+			<p><a href='?' title="All webmail clients suck. This one just sucks less.">&#8962;</a> || 
+			<a id="reload" href="#" title="Reload current mailbox">&#8635;</a></p>
 		</div>
 		<div id="menu-center">
-			<input id="btn-compose" type="button" value="Compose"/>
+			<input id="btn-compose" type="button" title="Compose" value="&#128394;"/>
 			&nbsp;&nbsp;&nbsp;
-			<input id="btn-reply" type="button" value="Reply"/>
-			<input id="btn-replyall" type="button" value="Reply All"/>
-			<input id="btn-forward" type="button" value="Forward"/>
+			<input id="btn-reply" type="button" title="Reply" value="&larr;"/>
+			<input id="btn-replyall" type="button" title="Reply All" value="&Larr;"/>
+			<input id="btn-forward" type="button" title="Forward" value="&#10150;"/>
 			&nbsp;&nbsp;&nbsp;
-			<input id="btn-markunread" type="button" value="Mark Unread"/>
-			<input id="btn-markread" type="button" value="Mark Read"/>
+			<input id="btn-markunread" type="button" title="Mark Unread" value="&#128233;"/>
+			<input id="btn-markread" type="button" title="Mark Read" value="&#9993;"/>
 			&nbsp;
-			<input id="btn-delete" type="button" value="Delete"/>
+			<input id="btn-delete" type="button" title="Delete" value="&#10060;"/>
 			<input id="btn-expunge" type="button" value="Expunge"/>
 			<select id="option-moveto" name="option-moveto">
 				<!-- Dynamically populated with folders -->
