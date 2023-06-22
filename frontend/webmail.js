@@ -1258,6 +1258,9 @@ ws.onmessage = function(e) {
 				ahref.textContent = jsonData.data[i].uid;
 				/* Yes, this is needed, we can't reference this as the arg directly: 8 = length of msg-uid- */
 				ahref.addEventListener('click', function() { commandFetchMessage(this.getAttribute("uid")); }, {passive: true});
+				/* Prevent left-clicking and middle-clicking since these will just reopen the folder, not open the message. */
+				ahref.addEventListener('contextmenu', function(e) { e.preventDefault(); setError("Please left-click to open a message"); });
+				ahref.addEventListener('auxclick', function(e) { e.preventDefault(); setError("Please left-click to open a message"); });
 
 				td = document.createElement('td');
 				td.appendChild(ahref); /* In case subject is empty, also put the link on the UID */
@@ -1289,6 +1292,9 @@ ws.onmessage = function(e) {
 				ahref.textContent = listTruncate(escapeHTML(jsonData.data[i].subject, 30));
 				/* Yes, this is needed, we can't reference this as the arg directly: 8 = length of msg-uid- */
 				ahref.addEventListener('click', function() { commandFetchMessage(this.getAttribute("uid")); }, {passive: true});
+				/* Prevent left-clicking and middle-clicking since these will just reopen the folder, not open the message. */
+				ahref.addEventListener('contextmenu', function(e) { e.preventDefault(); setError("Please left-click to open a message"); });
+				ahref.addEventListener('auxclick', function(e) { e.preventDefault(); setError("Please left-click to open a message"); });
 
 				td = document.createElement('td');
 				td.appendChild(ahref);
