@@ -31,7 +31,7 @@
 /* This is the root quote depth (no quoting), i.e. it's leftmost */
 .plaintext-ff {
 	padding-left: 12px;
-	white-space: pre;
+	white-space: pre-wrap;
 }
 .plaintext-ff-sub {
 	margin-top: 10px;
