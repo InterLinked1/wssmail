@@ -279,14 +279,16 @@ function editor(name, from, to, cc, subject, body, inreplyto, references) {
 	}
 	childhtml += "<input type='hidden' name='inreplyto' value='" + inreplyto + "'>";
 	childhtml += "<input type='hidden' name='references' value='" + (references.length > 0 ? (references + "\r\n " + inreplyto) : inreplyto) + "'>";
-	childhtml += "<textarea name='body'>" + body + "</textarea>";
-	childhtml += "<input type='submit' name='send' value='Send'/>";
+	childhtml += "<textarea id='compose-body' name='body'>" + body + "</textarea>";
+	childhtml += "<input type='submit' id='btn-send' name='send' value='Send'/>";
 	childhtml += "<input type='submit' name='savedraft' value='Save Draft'/>";
 	childhtml += "<h4>Attachment(s)</h4>";
-	childhtml += "<input type='file' name='attachments[]' multiple/>";
+	childhtml += "<input type='file' id='compose-attachments' name='attachments[]' multiple/>";
 	childhtml += "</form>";
 	childhtml += "</div>";
-	childhtml += "</body></html>";
+	childhtml += "</body>";
+	childhtml += "<script src='compose.js'></script>";
+	childhtml += "</html>";
 
 	var tab = window.open('about:blank', '_blank');
 	tab.document.write(childhtml);

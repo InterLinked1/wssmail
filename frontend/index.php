@@ -48,6 +48,7 @@
  * - Save copies of sent messages to Sent folder (via IMAP APPEND)
  * - Content Security Policy to mitigate CSS and JS injection in modern browsers
  * - Control whether HTML emails are allowed to load remote content
+ * - Forgotten attachment reminder
  *
  * Very nearly supported:
  * - Sending format=flowed plain text messages
@@ -702,16 +703,18 @@ if (isset($_POST['from'], $_POST['to'], $_POST['replyto'], $_POST['cc'], $_POST[
 			</select></div>
 
 			</div>
-			<textarea name='body'><?php echo $_POST['body'];?></textarea>
+			<textarea id='compose-body' name='body'><?php echo $_POST['body'];?></textarea>
 			<input type='hidden' name='inreplyto' value='<?php echo $_POST['inreplyto'];?>'/>
 			<input type='hidden' name='references' value='<?php echo $_POST['references'];?>'/>
-			<input type='submit' name='send' value='Send'/>
+			<input type='submit' id='btn-send' name='send' value='Send'/>
 			<input type='submit' name='savedraft' value='Save Draft'/>
 			<h4>Attachment(s)</h4>
-			<input type='file' name='attachments[]' multiple/>
+			<input type='file' id='compose-attachments' name='attachments[]' multiple/>
 			</form>
 			</div>
-		</body></html>
+		</body>
+		<script src='compose.js'></script>
+		</html>
 		<?php
 	} else {
 		?>
