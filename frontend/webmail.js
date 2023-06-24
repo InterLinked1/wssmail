@@ -1309,6 +1309,15 @@ ws.onmessage = function(e) {
 				}
 				frame.contentWindow.document.write(body);
 				frame.contentWindow.document.close();
+				/* If no font specified, use a sans-serif font by default */
+				var defaultcss = frame.contentWindow.document.createElement('style');
+				defaultcss.innerHTML = "body { font-family: sans-serif; }";
+				frame.contentWindow.document.head.insertBefore(defaultcss, frame.contentWindow.document.head.firstChild);
+
+				/* For some reason just stuffing it in the head doesn't work, but this does: */
+				var base = frame.contentWindow.document.createElement('base');
+				base.setAttribute('target', '_blank');
+				frame.contentWindow.document.head.insertBefore(base, frame.contentWindow.document.head.firstChild);
 			}
 
 			/* Display the message as seen in the message list */
