@@ -1096,6 +1096,41 @@ function doDownload(filename, content) {
     }
 }
 
+var lastCheckedSeqno = null;
+
+/* Multi-message range selection */
+function messageClick(e, obj) {
+	var seqno = parseInt(obj.getAttribute('seqno'));
+	if (lastCheckedSeqno !== null && e.shiftKey) { /* Shift selection */
+		/* Check all the messages in the range between the two seqnos */
+		var a, b;
+		/* Starting point and direction depends on direction */
+		if (seqno > lastCheckedSeqno) {
+			a = lastCheckedSeqno
+			b = seqno;
+		} else {
+			a = seqno;
+			b = lastCheckedSeqno;
+		}
+		var s = lastCheckedSeqno;
+		console.log("Range selection: " + a + "-" + b);
+		a++;
+		for (; a < b; a++) {
+			var cbox = document.getElementById('msg-sel-seqno-' + a);
+			if (cbox !== undefined) {
+				cbox.checked = true;
+			} else {
+				console.error("No message seqno: " + a);
+			}
+		}
+	}
+	if (obj.checked) {
+		lastCheckedSeqno = seqno;
+	} else {
+		lastCheckedSeqno = null;
+	}
+}
+
 ws.onmessage = function(e) {
 	var jsonData = JSON.parse(e.data);
 	console.log(jsonData);
@@ -1327,6 +1362,7 @@ ws.onmessage = function(e) {
 			/* XXX Along with IDLE updates, we really want to update the page title with the new unread count!!!!
 			 * Currently, the code really only does that on LIST. We need a better mechanism for updating the page title frequently. */
 		} else if (response === "FETCHLIST") {
+			lastCheckedSeqno = null;
 			if (jsonData.cause === "IDLE" || jsonData.cause === "EXISTS" || jsonData.cause === "EXPUNGE") {
 				/* Don't mess with the preview pane. */
 				/* Just refresh the message list for now. We'll get an EXISTS response
@@ -1342,7 +1378,6 @@ ws.onmessage = function(e) {
 			for (var i = 0; i < jsonData.data.length; i++) {
 				var tr = document.createElement('tr');
 				tr.setAttribute('id', 'msg-uid-' + jsonData.data[i].uid);
-				//var link = "<a href='#' title='" + escapeHTML(jsonData.data[i].subject) + "'>";
 				var flags = jsonData.data[i].flags;
 				if (!flags.includes("\\Seen")) {
 					/* Message is unread */
@@ -1352,7 +1387,14 @@ ws.onmessage = function(e) {
 				var td;
 
 				td = document.createElement('td');
-				td.innerHTML = "<input type='checkbox' name='msg-sel-uid' value='" + jsonData.data[i].uid + "'/>";
+				var input = document.createElement('input');
+				input.setAttribute('id', 'msg-sel-seqno-' + jsonData.data[i].seqno);
+				input.setAttribute('type', 'checkbox');
+				input.setAttribute('name', 'msg-sel-uid');
+				input.setAttribute('value', jsonData.data[i].uid);
+				input.setAttribute('seqno', jsonData.data[i].seqno); /* Dummy attribute to hold seqno */
+				input.addEventListener('click', function(e) { messageClick(e, this); }, {passive: true});
+				td.appendChild(input);
 				tr.appendChild(td);
 
 				td = document.createElement('td');
