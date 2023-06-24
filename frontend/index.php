@@ -688,12 +688,12 @@ if (isset($_POST['from'], $_POST['to'], $_POST['replyto'], $_POST['cc'], $_POST[
 		<p class='error'><?php echo $ret; ?></p>
 		<form id='composer' target='' method='post' enctype='multipart/form-data'>
 			<div class='form-table'>
-			<div><label for='from'>From</label><input type='text' id='from' name='from' value='<?php echo $_POST['from'];?>'></input></div>
-			<div><label for='replyto'>Reply To</label><input type='text' id='replyto' name='replyto' placeholder='Same as From' value='<?php echo $_POST['replyto'];?>'></input></div>
-			<div><label for='to'>To</label><input type='text' id='to' name='to' value='<?php echo $_POST['to'];?>' required></input></div>
-			<div><label for='cc'>Cc</label><input type='text' id='cc' name='cc' value='<?php echo $_POST['cc'];?>'></input></div>
-			<div><label for='bcc'>Bcc</label><input type='text' id='bcc' name='bcc' value='<?php echo $_POST['bcc'];?>'></input></div>
-			<div><label for='subject'>Subject</label><input type='text' id='subject' name='subject' value='<?php echo $_POST['subject'];?>'></input></div>
+			<div><label for='from'>From</label><input type='text' id='from' name='from' value='<?php echo htmlentities($_POST['from'], ENT_QUOTES);?>'></input></div>
+			<div><label for='replyto'>Reply To</label><input type='text' id='replyto' name='replyto' placeholder='Same as From' value='<?php echo htmlentities($_POST['replyto'], ENT_QUOTES);?>'></input></div>
+			<div><label for='to'>To</label><input type='text' id='to' name='to' value='<?php echo htmlentities($_POST['to'], ENT_QUOTES);?>' required></input></div>
+			<div><label for='cc'>Cc</label><input type='text' id='cc' name='cc' value='<?php echo htmlentities($_POST['cc'], ENT_QUOTES);?>'></input></div>
+			<div><label for='bcc'>Bcc</label><input type='text' id='bcc' name='bcc' value='<?php echo htmlentities($_POST['bcc'], ENT_QUOTES);?>'></input></div>
+			<div><label for='subject'>Subject</label><input type='text' id='subject' name='subject' value='<?php echo htmlentities($_POST['subject'], ENT_QUOTES);?>'></input></div>
 			<div><label for='priority'>Priority</label>
 			<select name="priority">
 				<option value="1">Highest</option>
@@ -704,9 +704,9 @@ if (isset($_POST['from'], $_POST['to'], $_POST['replyto'], $_POST['cc'], $_POST[
 			</select></div>
 
 			</div>
-			<textarea id='compose-body' name='body'><?php echo $_POST['body'];?></textarea>
-			<input type='hidden' name='inreplyto' value='<?php echo $_POST['inreplyto'];?>'/>
-			<input type='hidden' name='references' value='<?php echo $_POST['references'];?>'/>
+			<textarea id='compose-body' name='body'><?php echo htmlspecialchars($_POST['body']);?></textarea>
+			<input type='hidden' name='inreplyto' value='<?php echo htmlentities($_POST['inreplyto'], ENT_QUOTES);?>'/>
+			<input type='hidden' name='references' value='<?php echo htmlentities($_POST['references'], ENT_QUOTES);?>'/>
 			<input type='submit' id='btn-send' name='send' value='Send'/>
 			<input type='submit' name='savedraft' value='Save Draft'/>
 			<h4>Attachment(s)</h4>

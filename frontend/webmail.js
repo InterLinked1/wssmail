@@ -294,6 +294,10 @@ function upload() {
 }
 
 function editor(name, from, to, cc, subject, body, inreplyto, references) {
+	/* Escape any quotes inside attributes */
+	to = to.replace(/'/g, "&#39;");
+	cc = cc.replace(/'/g, "&#39;");
+	subject = subject.replace(/'/g, "&#39;");
 	var childhtml = "<html><head><title>" + name + "</title><link rel='stylesheet' type='text/css' href='style.css'><link rel='stylesheet' type='text/css' href='form.css'></head><body>";
 	childhtml += "<div>";
 	childhtml += "<form id='composer' target='' method='post' enctype='multipart/form-data'>";
