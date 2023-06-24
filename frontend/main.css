@@ -49,6 +49,17 @@ a {
 #menu-right {
 	float: right;
 }
+#btn-upload {
+	/* display: none doesn't have any effect, but these do: */
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+}
+#btn-upload-label {
+	/* Make it look like a button */
+	cursor: pointer;
+	background-color: #f0f0f0;
+}
 #folders {
 	height: 100%;
 	width: 225px;

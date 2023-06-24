@@ -261,6 +261,38 @@ function commandFetchMessage(uid) {
 	ws.send(payload);
 }
 
+function append(data, len) {
+	console.log("Appending message with size " + len);
+	var payload = {
+		command: "APPEND",
+		message: data,
+		size: len
+		/* XXX No date or flags */
+	}
+	payload = JSON.stringify(payload);
+	ws.send(payload);
+}
+
+function upload() {
+	if (selectedFolder === null) {
+		setError("No mailbox currently active");
+		return;
+	}
+	var file = document.getElementById('btn-upload').files[0];
+	var size = file.size;
+	var data = null;
+
+	var reader = new FileReader();
+	reader.onload = (e) => {
+		data = e.target.result;
+		if (data === null) {
+			console.error("No message body?");
+		}
+		append(data, size);
+	};
+	reader.readAsText(file);
+}
+
 function editor(name, from, to, cc, subject, body, inreplyto, references) {
 	var childhtml = "<html><head><title>" + name + "</title><link rel='stylesheet' type='text/css' href='style.css'><link rel='stylesheet' type='text/css' href='form.css'></head><body>";
 	childhtml += "<div>";
@@ -897,6 +929,9 @@ function displayHeader(msg, name, val) {
 }
 
 function formatShortEmail(email) {
+	if (email === undefined) {
+		return "";
+	}
 	if (email.length > 23) {
 		var arrpos = email.indexOf('<');
 		if (arrpos !== -1) {
@@ -1454,6 +1489,8 @@ ws.onmessage = function(e) {
 document.getElementById('reload').addEventListener('click', function() { window.location.reload(); });
 
 document.getElementById('btn-compose').addEventListener('click', compose);
+document.getElementById('btn-upload').addEventListener('change', upload);
+
 document.getElementById('btn-reply').addEventListener('click', reply);
 document.getElementById('btn-replyall').addEventListener('click', replyAll);
 document.getElementById('btn-forward').addEventListener('click', forward);

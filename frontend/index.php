@@ -109,7 +109,8 @@ if (isset($_SESSION['webmail'])) {
 	/* Idle too long since last active? */
 	if (isset($_POST['logout']) || $_SESSION['webmail']['loginlimit'] > 0) {
 		$lastActive = $_SESSION['webmail']['active'];
-		if (isset($_POST['logout']) || $lastActive < time() - 7200) {
+		die("Time since last login/limit: " . $lastActive . "/" . time() . "/" . $_SESSION['webmail']['loginlimit']);
+		if (isset($_POST['logout']) || $lastActive < time() - $_SESSION['webmail']['loginlimit']) {
 			/* Auto logout */
 			logout();
 			/* Reload the page now */
@@ -425,9 +426,9 @@ document.getElementById('lookup-btn').addEventListener('click', function() {
 /* Send Content-Security-Policy - help protect against injections from HTML emails, in modern browsers at least */
 /* Note that connect-src: 'self' is incorrect because the scheme is different (either ws or wss).
  * Therefore, we have to build that manually */
-$wsSource = ($_SERVER['HTTPS'] ? "wss://" : "ws://") . $_SERVER['SERVER_NAME'] . ":" . $_SERVER['SERVER_PORT'];
+$wsSource = (isset($_SERVER['HTTPS']) ? "wss://" : "ws://") . $_SERVER['SERVER_NAME'] . ":" . $_SERVER['SERVER_PORT'];
 /* Need to explicitly refer to the current host, for child tabs that are created (since they are about:blank, which is not our current host.) */
-$pgSource = ($_SERVER['HTTPS'] ? "https://" : "http://") . $_SERVER['SERVER_NAME'] . ":" . $_SERVER['SERVER_PORT'];
+$pgSource = (isset($_SERVER['HTTPS']) ? "https://" : "http://") . $_SERVER['SERVER_NAME'] . ":" . $_SERVER['SERVER_PORT'];
 header("Content-Security-Policy: default-src 'none'; base-uri 'none'; frame-ancestors 'self' $pgSource; object-src 'self'; child-src 'self' $pgSource; frame-src 'none'; img-src https: data:; worker-src 'none'; media-src 'self'; connect-src $wsSource; font-src 'self'; style-src 'self' $pgSource 'unsafe-inline'; script-src 'self' $pgSource; report-to default;");
 
 function addAddresses($mail, $header, $s) {
@@ -735,6 +736,10 @@ startHTML();
 		</div>
 		<div id="menu-center">
 			<input id="btn-compose" type="button" title="Compose" value="&#128394;"/>
+
+			<label id="btn-upload-label" title="Append (Upload Message To Folder)" for="btn-upload">&uarr;</label>
+			<input id="btn-upload" type="file"/>
+
 			&nbsp;&nbsp;&nbsp;
 			<input id="btn-reply" type="button" title="Reply" value="&larr;"/>
 			<input id="btn-replyall" type="button" title="Reply All" value="&Larr;"/>
@@ -793,6 +798,7 @@ startHTML();
 				<div id="messagepages">
 					<!-- This will get replaced with a message list -->
 					<p>Select a folder to view messages</p>
+					<noscript>This application requires JavaScript to function.</noscript>
 				</div>
 			</div>
 			<div id="previewpane">
