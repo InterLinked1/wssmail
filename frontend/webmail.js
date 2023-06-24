@@ -10,6 +10,7 @@ var gotlist = false;
 var trashFolder = null;
 var junkFolder = null;
 
+var forceLabels = false;
 var viewPreview = true;
 var selectedFolder = null;
 var pageNumber = 1;
@@ -135,6 +136,15 @@ ws.onopen = function(e) {
 	document.getElementById("option-preview").checked = viewPreview;
 
 	console.log("Folder: " + selectedFolder + ", page: " + pageNumber + ", page size: " + pagesize);
+
+	/* Settings in local storage, rather than in query params */
+	q = localStorage.getItem("forcelabels");
+	if (q !== undefined) {
+		/* e.g. localStorage.setItem("forcelabels", "true"); */
+		forceLabels = (q === "true");
+	}
+
+	processSettings();
 };
 ws.onclose = function(e) {
 	console.log("Websocket closed");
@@ -148,6 +158,21 @@ ws.onerror = function(e) {
 	console.log("Websocket error");
 	setError("A websocket error occured.");
 };
+
+function processSettings() {
+	if (forceLabels) {
+		document.getElementById('btn-compose').value = "Compose";
+		document.getElementById('btn-reply').value = "Reply";
+		document.getElementById('btn-replyall').value = "Reply All";
+		document.getElementById('btn-forward').value = "Forward";
+		document.getElementById('btn-markunread').value = "Mark Unread";
+		document.getElementById('btn-markread').value = "Mark Read";
+		document.getElementById('btn-junk').value = "Mark Junk";
+		document.getElementById('btn-delete').value = "Delete";
+		//document.getElementById('option-extreq').value = "Ext Content";
+		//document.getElementById('btn-download').value = "Download";
+	}
+}
 
 function addToFolderMenu(searchParams, parent, folder) {
 	var li = document.createElement('li');

@@ -108,6 +108,15 @@ Unlike forced settings, if you create a preset, you *must* configure **ALL** the
 
 ## FAQ
 
+### How can I see labels for mail actions, rather than icons?
+
+Icons are used by default to save space in the menu.
+If you'd rather see icons, open your browser developer console (F12) and execute the following JavaScript:
+
+`localStorage.setItem("forcelabels", "true");`
+
+Reload the page, and you'll now see labels in your current browser, unless/until you change that setting.
+
 ### Why was wssmail created?
 
 wssmail was created because *all webmail clients suck, this one just sucks less*. I have pretty much always hated webmail because of how primitive and simplistic it is. I don't regularly use webmail, either; I use a traditional mail client, and I have a lot of email accounts so using webmail to manage just a single account is wholly impractical for me. At the same time, my use of a mail client has created high expectations for what a mail client should be able to do, and every webmail service ever (SquirrelMail, RoundCube, Gmail's mail.google.com, etc.) just falls far woefully short of my expectations. However, webmail does have its use cases and I felt that webmail could support many of the things I wished it supported, existing webmail clients just weren't focused on those things. Thus, I decided to write my own webmail software and create the kind of webmail client that I wished had existed.
