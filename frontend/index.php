@@ -150,7 +150,50 @@ function startHTML() {
 	<?php
 }
 
-if (!isset($_SESSION['webmail'])) {
+if (isset($_GET['settings'])) {
+	startHTML();?>
+	<style>
+body {
+	background-color: tan;
+}
+#settings {
+	padding: 10px;
+}
+input[type=text] {
+	width: 300px;
+}
+	</style>
+	<div id="settings">
+		<h1>Settings</h1>
+		<p>Note that these settings are saved locally in your browser, and are not account-specific.</p>
+		<p>Settings will update immediately when toggled, but you will need to reload the webmail application.</p>
+		<hr>
+		<div id="manage-local-settings" class="form-table">
+		</div>
+		<div id="manage-identities">
+			<h3>Aliases</h3>
+			<p>Identities you have configured will show up here. You may want to do this if you have aliases for an email account.</p>
+			<div id="existing-identities">
+				Loading&#133;
+			</div>
+			<input type='text' id='identity-tbox' placeholder='John Smith &lt;jsmith@example.com&gt;'></input>
+			<input type='button' id='remove-identity' value='Remove Identity'/>
+			<input type='button' id='add-identity' value='Add Identity'/>
+		</div>
+		<hr>
+		<center><a href="https://github.com/InterLinked1/wssmail" target="_blank">wssmail</a></center>
+	</div>
+	<script src='settings.js'></script>
+	<script src='config.js'></script>
+	<script>
+document.addEventListener('DOMContentLoaded', function() {
+	displaySettings();
+}, false);
+	</script>
+	</body></html>
+	<?php
+	die();
+} else if (!isset($_SESSION['webmail'])) {
 	$error = null;
 	/* Login page */
 	if (isset($_POST['server'], $_POST['port'], $_POST['smtpserver'], $_POST['smtpport'], $_POST['username'], $_POST['password'], $_POST['security'], $_POST['smtpsecurity'], $_POST['loginlimit'], $_POST['append'])) {
@@ -845,7 +888,7 @@ startHTML();
 		</div>
 	</div>
 	<div id="statusbar">
-		<p id="clientname"><a href="https://github.com/InterLinked1/wssmail" target="_blank" title="All webmail clients suck. This one just sucks less.">wssmail</a></p>
+		<p id="clientname"><a href="https://github.com/InterLinked1/wssmail" target="_blank" title="All webmail clients suck. This one just sucks less.">wssmail</a> || <a href='<?php echo $_SERVER['REQUEST_URI'] . (strpos($_SERVER['REQUEST_URI'], '?') !== false ? '&' : '?') . 'settings'; ?>' target='_blank'>Settings</a></p>
 		<p id='errorbar' class='error'></p>
 		<div id='status-right'>
 			<span id='uidnext' title='UIDNEXT'></span>
@@ -853,6 +896,7 @@ startHTML();
 			<span id='quota' title='QUOTA'></span>
 		</div>
 	</div>
+	<script src='settings.js'></script>
 	<script src='webmail.js'></script>
 </body>
 </html>

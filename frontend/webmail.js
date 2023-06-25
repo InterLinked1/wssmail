@@ -10,7 +10,6 @@ var gotlist = false;
 var trashFolder = null;
 var junkFolder = null;
 
-var forceLabels = false;
 var viewPreview = true;
 var selectedFolder = null;
 var pageNumber = 1;
@@ -158,13 +157,6 @@ ws.onopen = function(e) {
 
 	console.log("Folder: " + selectedFolder + ", page: " + pageNumber + ", page size: " + pagesize);
 
-	/* Settings in local storage, rather than in query params */
-	q = localStorage.getItem("forcelabels");
-	if (q !== undefined) {
-		/* e.g. localStorage.setItem("forcelabels", "true"); */
-		forceLabels = (q === "true");
-	}
-
 	processSettings();
 };
 ws.onclose = function(e) {
@@ -181,7 +173,8 @@ ws.onerror = function(e) {
 };
 
 function processSettings() {
-	if (forceLabels) {
+	/* Settings in local storage, rather than in query params */
+	if (getBoolSetting("forcelabels")) {
 		document.getElementById('btn-compose').value = "Compose";
 		document.getElementById('btn-reply').value = "Reply";
 		document.getElementById('btn-replyall').value = "Reply All";

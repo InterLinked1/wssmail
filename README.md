@@ -111,9 +111,8 @@ Unlike forced settings, if you create a preset, you *must* configure **ALL** the
 ### How can I see labels for mail actions, rather than icons?
 
 Icons are used by default to save space in the menu.
-If you'd rather see icons, open your browser developer console (F12) and execute the following JavaScript:
 
-`localStorage.setItem("forcelabels", "true");`
+If you'd rather see icons, open "Settings" from the lower-left corner and enable "Force Labels".
 
 Reload the page, and you'll now see labels in your current browser, unless/until you change that setting.
 
