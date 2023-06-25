@@ -382,15 +382,11 @@ function doReply(replyto, replycc) {
 		return;
 	}
 
-	/* XXX Improvement, like Thunderbird et al, if one of our aliases was a To/Cc address,
-	 * use that for the From address, rather than our username.
-	 * For that, however, the aliases would need to be kept track of somewhere,
-	 * and right now this is a (between sessions) stateless program. */
 	var replysubject = lastsubject.substring(0, 3) === "Re:" ? lastsubject : ("Re: " + lastsubject); /* Don't prepend Re: if it's already there */
 
 	/* Quote each line of the original message */
-	/* XXX If we fetched the message source (raw), we should fetch the plain text component to reply to */
-	var bodyMsg = lastbody.split('\r\n');
+	/* XXX If we fetched the HTML or message source (raw), we should fetch the plain text component to reply to */
+	var bodyMsg = (lastbody !== undefined ? lastbody.split('\r\n') : "");
 	var replybody = "";
 	/* XXX This is not quite correct - use right format for date + only sender name, if name available */
 	replybody += "On " + formatDate(0, lastsent) + ", " + lastfrom + " wrote:\r\n"
@@ -399,9 +395,34 @@ function doReply(replyto, replycc) {
 		replybody += ">" + b + "\r\n";
 	}
 
-	/* XXX todo use lastmsgid and references to set the In-Reply-To and References headers properly, so we don't break threading! */
+	/* If one of our configured identities was one of the recipients of the message to which we're replying,
+	 * then assume that's us and reply to the message using the same identity.
+	 * This mirrors the identity functionality in Thunderbird-like clients. */
+	var from = '';
+	var idents = getArraySetting('identities');
+	for (i = 0; i < idents.length; i++) {
+		/* See if any of the identities was any of the recipients of the message to which we're replying. */
+		var email = idents[i];
+		var tmp = email.indexOf('<');
+		if (tmp !== -1) { /* Use just the portion in <>, if specified */
+			email = email.substring(tmp + 1);
+			tmp = email.indexOf('>');
+			email = email.substring(0, tmp);
+		}
+		if (replyto.indexOf(email) !== -1) {
+			from = idents[i]; /* Use the full identity, not just the email portion (on match) */
+			console.debug("Overriding from identity to " + from);
+			break;
+		} else if (replycc.indexOf(email) !== -1) {
+			from = idents[i];
+			console.debug("Overriding from identity to " + from);
+			break;
+		}
+	}
 
-	editor("Reply", '', replyto, replycc, replysubject, replybody, lastmsgid, lastreferences);
+	/* We use lastmsgid and references to set the In-Reply-To and References headers properly, so we don't break threading
+	 * I really hate mail clients that don't preserve threading... their noncompliance makes everyone miserable... */
+	editor("Reply", from, replyto, replycc, replysubject, replybody, lastmsgid, lastreferences);
 }
 
 function reply(to, cc) {
@@ -415,11 +436,12 @@ function replyAll() {
 	var addresses = lastto.split(',');
 	for (var x in addresses) {
 		x = addresses[x];
-		/* XXX Improve this logic: if one of the "To" or "Cc" recipients is same as our outgoing From address, skip it. Should also do for Cc? */
+		/* XXX If one of the "To" or "Cc" recipients is same as our outgoing From address, or any of our identities, skip it. */
+		/* XXX Should also do for Cc? */
 		if (x.indexof('"' + document.getElementById('fromaddress').value + '"') === -1) {
 			allfrom += ", " + x;
 		} else {
-			console.debug("Not adding ourselves to recipient list again");
+			console.debug("Not adding " + x + " to recipient list again");
 		}
 	}
 	doReply(allfrom, lastcc);

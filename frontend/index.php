@@ -50,6 +50,7 @@
  * - Control whether HTML emails are allowed to load remote content
  * - Forgotten attachment reminder
  * - Single-criterion sorting
+ * - Reply using the same identity to which the message was addressed
  *
  * Very nearly supported:
  * - Sending format=flowed plain text messages
@@ -821,14 +822,7 @@ startHTML();
 		<div id="menu-right">
 			<label for="option-pagesize" title="Sort order">Sort</label>
 			<select id="option-sort" name="option-sort">
-				<!-- Note: Due to current pagesize set logic, these must increment by 5s, starting from 5, to max option -->
 				<option value="none">None</option>
-				<!-- Note: These seem backwards because they are, in a way.
-				The backend logic is written to expect the "first" result on the last page and show the "last"
-				result at the beginning, so that on an unsorted mailbox, the latest results show up on the first page.
-				Therefore, we flip all the orderings here, e.g. to sort in descending order, we really ask the server
-				to do an ascending sort, so that when the last results are used for the first page, the largest items
-				show up there, making it feel like a descending sort. -->
 				<option value="sent-desc">Sent &darr;</option>
 				<option value="sent-asc">Sent &uarr;</option>
 				<option value="received-desc">Rcvd &darr;</option>
