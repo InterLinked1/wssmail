@@ -1484,8 +1484,8 @@ ws.onmessage = function(e) {
 				tr.appendChild(td);
 
 				td = document.createElement('td');
-				if (jsonData.data[i].attachments !== undefined) {
-					td.innerHTML = jsonData.data[i].attachments.length > 0 ? "&#x1F4CE;" : "";
+				if (jsonData.data[i].attachments !== undefined && jsonData.data[i].attachments) {
+					td.innerHTML = "&#x1F4CE;";
 				}
 				tr.appendChild(td);
 
