@@ -16,6 +16,7 @@ var selectedFolder = null;
 var pageNumber = 1;
 /* Set default page size based on screen size */
 console.log("Screen height: " + window.screen.height);
+var sortOrder = null;
 var pagesize = window.screen.height > 800 ? 25 : window.screen.height > 600 ? 15 : 10;
 var viewRaw = false;
 var viewHTML = true;
@@ -80,6 +81,14 @@ function toggleRaw(elem) {
 	}
 }
 
+function setSort(s) {
+	sortOrder = s;
+	setq('sort', s);
+	/* Do a FETCHLIST again */
+	var currentPage = getq('page');
+	commandFetchList(currentPage);
+}
+
 function setPageSize(pgsz) {
 	if (pgsz < 1) {
 		return;
@@ -110,6 +119,18 @@ ws.onopen = function(e) {
 		pagesize = q;
 	}
 	document.getElementById('option-pagesize').selectedIndex = Math.ceil(pagesize / 5) - 1;
+
+	q = searchParams.get("sort");
+	if (q !== undefined && q !== null) {
+		var sortDropdown = document.getElementById('option-sort');
+		for (var i = 0; i < sortDropdown.options.length; i++) {
+			if (sortDropdown.options[i].value === q) {
+				sortDropdown.selectedIndex = i;
+				sortOrder = i > 0 ? q : null; /* First one is none (default) */
+				break;
+			}
+		}
+	}
 
 	q = searchParams.get("html");
 	if (q !== undefined && q !== null) {
@@ -198,7 +219,8 @@ function commandSelectFolder(folder, autoselected) {
 	var payload = {
 		command: "SELECT",
 		folder: folder,
-		pagesize: parseInt(pagesize)
+		pagesize: parseInt(pagesize),
+		sort: sortOrder
 	}
 	payload = JSON.stringify(payload);
 	ws.send(payload);
@@ -238,7 +260,8 @@ function commandFetchList(page) {
 	var payload = {
 		command: "FETCHLIST",
 		page: parseInt(pageNumber),
-		pagesize: parseInt(pagesize)
+		pagesize: parseInt(pagesize),
+		sort: sortOrder
 	}
 	payload = JSON.stringify(payload);
 	console.debug(payload);
@@ -850,15 +873,16 @@ function endFolderView() {
 function setQuota(total, used) {
 	if (total === undefined || used === undefined) {
 		document.getElementById('quota').textContent = '';
+		console.log("Quota usage unavailable for this mailbox");
 		return;
 	}
 	var percent = (100 * used / total).toFixed(1);
 	var p = "" + used + "/" + total + " KB (" + percent + "%)";
 	document.getElementById('quota').textContent = p;
 	if (percent > 95) {
-		document.getElementById('quota').classList.add("error");
+		document.getElementById('quota').classList.add("quota-warning");
 	} else {
-		document.getElementById('quota').classList.remove("error");
+		document.getElementById('quota').classList.remove("quota-warning");
 	}
 }
 
@@ -1121,38 +1145,38 @@ function doDownload(filename, content) {
     }
 }
 
-var lastCheckedSeqno = null;
+var lastCheckedIndex = null;
 
 /* Multi-message range selection */
 function messageClick(e, obj) {
-	var seqno = parseInt(obj.getAttribute('seqno'));
-	if (lastCheckedSeqno !== null && e.shiftKey) { /* Shift selection */
+	var index = parseInt(obj.getAttribute('index'));
+	if (lastCheckedIndex !== null && e.shiftKey) { /* Shift selection */
 		/* Check all the messages in the range between the two seqnos */
 		var a, b;
 		/* Starting point and direction depends on direction */
-		if (seqno > lastCheckedSeqno) {
-			a = lastCheckedSeqno
-			b = seqno;
+		if (index > lastCheckedIndex) {
+			a = lastCheckedIndex
+			b = index;
 		} else {
-			a = seqno;
-			b = lastCheckedSeqno;
+			a = index;
+			b = lastCheckedIndex;
 		}
-		var s = lastCheckedSeqno;
+		var s = lastCheckedIndex;
 		console.log("Range selection: " + a + "-" + b);
 		a++;
 		for (; a < b; a++) {
-			var cbox = document.getElementById('msg-sel-seqno-' + a);
-			if (cbox !== undefined) {
+			var cbox = document.getElementById('msg-sel-index-' + a);
+			if (cbox !== undefined && cbox !== null) {
 				cbox.checked = true;
 			} else {
-				console.error("No message seqno: " + a);
+				console.error("No message index: " + a);
 			}
 		}
 	}
 	if (obj.checked) {
-		lastCheckedSeqno = seqno;
+		lastCheckedIndex = index;
 	} else {
-		lastCheckedSeqno = null;
+		lastCheckedIndex = null;
 	}
 }
 
@@ -1400,6 +1424,7 @@ ws.onmessage = function(e) {
 			setQuota(jsonData.quota, jsonData.quotaused);
 			var epoch = Date.now();
 			jsonData.data = Array.prototype.reverse.call(jsonData.data); /* Reverse so it's newest to oldest */
+			var index = 1; /* Don't use sequence number, in case there is some other ordering to messages */
 			for (var i = 0; i < jsonData.data.length; i++) {
 				var tr = document.createElement('tr');
 				tr.setAttribute('id', 'msg-uid-' + jsonData.data[i].uid);
@@ -1413,11 +1438,12 @@ ws.onmessage = function(e) {
 
 				td = document.createElement('td');
 				var input = document.createElement('input');
-				input.setAttribute('id', 'msg-sel-seqno-' + jsonData.data[i].seqno);
+				input.setAttribute('id', 'msg-sel-index-' + index);
 				input.setAttribute('type', 'checkbox');
 				input.setAttribute('name', 'msg-sel-uid');
 				input.setAttribute('value', jsonData.data[i].uid);
-				input.setAttribute('seqno', jsonData.data[i].seqno); /* Dummy attribute to hold seqno */
+				input.setAttribute('index', index); /* Dummy attribute to hold index */
+				index++;
 				input.addEventListener('click', function(e) { messageClick(e, this); }, {passive: true});
 				td.appendChild(input);
 				tr.appendChild(td);
@@ -1583,6 +1609,7 @@ document.getElementById('btn-move').addEventListener('click', move);
 document.getElementById('btn-copy').addEventListener('click', copy);
 document.getElementById('btn-download').addEventListener('click', exportMessage);
 
+document.getElementById('option-sort').addEventListener('change', function() { setSort(this.value); }, {passive: true});
 document.getElementById('option-pagesize').addEventListener('change', function() { setPageSize(this.value); }, {passive: true});
 document.getElementById('option-preview').addEventListener('change', function() { togglePreview(this); }, {passive: true});
 document.getElementById('option-html').addEventListener('change', function() { toggleHTML(this); }, {passive: true});

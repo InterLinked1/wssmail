@@ -149,3 +149,6 @@ a {
 	font-weight: 500;
 	display: inline-block;
 }
+.quota-warning {
+	color: #d40c0c;
+}

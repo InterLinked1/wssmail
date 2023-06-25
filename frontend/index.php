@@ -49,6 +49,7 @@
  * - Content Security Policy to mitigate CSS and JS injection in modern browsers
  * - Control whether HTML emails are allowed to load remote content
  * - Forgotten attachment reminder
+ * - Single-criterion sorting
  *
  * Very nearly supported:
  * - Sending format=flowed plain text messages
@@ -61,7 +62,6 @@
  * - Downloading/detaching/deleting attachments.
  * - Resuming or sending email drafts
  * - Displaying messages grouped in threads
- * - Sorting, by date, and other attributes
  * - Update message list table when server implicitly marks messages as read
  * - Updating list of folders with updated counts/sizes as needed
  * - Searching, filtering (e.g. show only unread messages in a folder)
@@ -104,12 +104,28 @@ function logout() {
 	session_destroy();
 }
 
+ini_set('session.gc_maxlifetime', 2678400); /* 1 month */
+ini_set('session.cookie_lifetime', 2678400);
+if (isset($_POST['loginlimit'])) {
+	$maxlifetime = (int) $_POST['loginlimit'];
+	if ($maxlifetime < 0) {
+		$maxlifetime = 0;
+	} else if ($maxlifetime === 0) {
+		$maxlifetime = 2678400;
+	}
+	session_set_cookie_params([
+		'lifetime' => $maxlifetime,
+		'secure' => true,
+		'httponly' => true,
+		'samesite' => "Strict"
+	]);
+}
 session_start();
+
 if (isset($_SESSION['webmail'])) {
 	/* Idle too long since last active? */
 	if (isset($_POST['logout']) || $_SESSION['webmail']['loginlimit'] > 0) {
 		$lastActive = $_SESSION['webmail']['active'];
-		die("Time since last login/limit: " . $lastActive . "/" . time() . "/" . $_SESSION['webmail']['loginlimit']);
 		if (isset($_POST['logout']) || $lastActive < time() - $_SESSION['webmail']['loginlimit']) {
 			/* Auto logout */
 			logout();
@@ -748,7 +764,7 @@ startHTML();
 			<input id="btn-markunread" type="button" title="Mark Unread" value="&#128233;"/>
 			<input id="btn-markread" type="button" title="Mark Read" value="&#9993;"/>
 			&nbsp;
-			<input id="btn-junk" type="button" title="Junk" value="&#128293;"/>
+			<input id="btn-junk" type="button" title="Junk/Spam" value="&#128293;"/>
 			<input id="btn-delete" type="button" title="Delete" value="&#10060;"/>
 			<input id="btn-expunge" type="button" value="Expunge"/>
 			<select id="option-moveto" name="option-moveto">
@@ -760,6 +776,29 @@ startHTML();
 			<!-- TODO: Add print -->
 		</div>
 		<div id="menu-right">
+			<label for="option-pagesize" title="Sort order">Sort</label>
+			<select id="option-sort" name="option-sort">
+				<!-- Note: Due to current pagesize set logic, these must increment by 5s, starting from 5, to max option -->
+				<option value="none">None</option>
+				<!-- Note: These seem backwards because they are, in a way.
+				The backend logic is written to expect the "first" result on the last page and show the "last"
+				result at the beginning, so that on an unsorted mailbox, the latest results show up on the first page.
+				Therefore, we flip all the orderings here, e.g. to sort in descending order, we really ask the server
+				to do an ascending sort, so that when the last results are used for the first page, the largest items
+				show up there, making it feel like a descending sort. -->
+				<option value="sent-desc">Sent &darr;</option>
+				<option value="sent-asc">Sent &uarr;</option>
+				<option value="received-desc">Rcvd &darr;</option>
+				<option value="received-asc">Rcvd &uarr;</option>
+				<option value="size-desc">Size &darr;</option>
+				<option value="size-asc">Size &uarr;</option>
+				<option value="subject-asc">Subject &uarr;</option>
+				<option value="subject-desc">Subject &darr;</option>
+				<option value="from-asc">From &uarr;</option>
+				<option value="from-desc">From &darr;</option>
+				<option value="to-asc">To &uarr;</option>
+				<option value="to-desc">To &darr;</option>
+			</select>
 			<label for="option-pagesize" title="Number of messages to show on each page">Pg. Sz</label>
 			<select id="option-pagesize" name="option-pagesize">
 				<!-- Note: Due to current pagesize set logic, these must increment by 5s, starting from 5, to max option -->
