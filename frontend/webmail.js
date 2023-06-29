@@ -188,6 +188,16 @@ function processSettings() {
 	}
 }
 
+function folderLevel(folder) {
+	var level = 0;
+	for (var i = 0; i < folder.name.length; i++) {
+		if (folder.name.charAt(i) === hierarchyDelimiter) {
+			level++;
+		}
+	}
+	return level;
+}
+
 function addToFolderMenu(details, searchParams, parent, folder) {
 	var li = document.createElement('li');
 	li.setAttribute('id', 'folder-link-' + folder.name);
@@ -1200,17 +1210,33 @@ function drawFolderMenu() {
 	var url = new URL(window.location.href);
 	const searchParams = new URLSearchParams(url.search);
 
+	var lastAddedFolderLevel = 0;
+	var ul = root_ul;
 	for (var name in folders) {
-		addToFolderMenu(showtotal, searchParams, root_ul, folders[name]);
-		if (folders[name].flags.indexOf("NoSelect") !== -1) {
-			continue;
+		var level = folderLevel(folders[name]);
+		if (false) {
+			/* WIP: Collapsible subfolder lists: problem is subfolder ul/li's are forced into a single table column,
+			 * making the problem worse each nested level
+			 * The structure here is right, but the styling is wrong.
+			 */
+			if (level > lastAddedFolderLevel) {
+				var subul = document.createElement('ul');
+				ul.appendChild(subul);
+				ul = subul;
+			} else if (level < lastAddedFolderLevel) {
+				ul = ul.parentNode;
+			}
 		}
-		if (folders[name].unseen !== undefined) {
+		if (!showtotal && folderExists(folders[name]) && folders[name].unseen !== undefined) {
+			showtotal = true;
+		}
+		addToFolderMenu(showtotal, searchParams, ul, folders[name]);
+		if (folderExists(folders[name]) && folders[name].unseen !== undefined) {
 			totalsize += folders[name].size;
 			totalmsg += folders[name].messages;
 			totalunread += folders[name].unseen;
-			showtotal = true;
 		}
+		lastAddedFolderLevel = level;
 	}
 	if (showtotal) {
 		total_li.innerHTML = "<span class='foldername'><i>All Folders<span class='folderunread" + (totalunread > 0 ? " folder-hasunread" : "") + "'>" + (totalunread > 0 ? (" (" + totalunread + ")") : "") + "</i></span></a></span><span class='foldercount'>" + totalmsg + "</span><span class='foldersize'>" + formatSize(totalsize) + "</span>";

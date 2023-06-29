@@ -121,10 +121,13 @@ a {
 	display: inline-block;
 }
 
-#folders ul {
+#folders > ul {
 	display: table;
 	margin: 0;
 	padding: 0;
+}
+#folders ul {
+	padding-left: 0;
 }
 #folders ul li {
 	display: table-row;
