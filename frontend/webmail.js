@@ -188,7 +188,7 @@ function processSettings() {
 	}
 }
 
-function addToFolderMenu(searchParams, parent, folder) {
+function addToFolderMenu(details, searchParams, parent, folder) {
 	var li = document.createElement('li');
 	li.setAttribute('id', 'folder-link-' + folder.name);
 	var selected = searchParams.get("folder") === folder.name;
@@ -196,12 +196,23 @@ function addToFolderMenu(searchParams, parent, folder) {
 		console.log("Currently selected: " + folder.name);
 		li.classList.add("folder-current");
 	}
-	if (folder.unseen === undefined) {
+
+	var dispname = displayFolderName(folder);
+	var prefix = folder.prefix;
+	var noselect = !folderExists(folder);
+
+	if (!details) {
 		/* This is just the preliminary list */
-		li.innerHTML = "<span class='foldername'><a href='#'>" + displayFolderName(folder) + "</a></span>";
-		li.addEventListener('click', function() { commandSelectFolder(folder.name, false); }, {passive: true});
+		li.innerHTML = "<span class='foldername'>" + prefix + dispname + "</span>";
 	} else {
-		li.innerHTML = "<span class='foldername" + (folder.unseen > 0 ? " folder-hasunread" : "") + "'>" + "<a href='#' title='" + folder.name + "'>" + displayFolderName(folder) + "<span class='folderunread'>" + (folder.unseen > 0 ? " (" + folder.unseen + ")" : "") + "</span></a></span><span class='foldercount'>" + folder.messages + "</span><span class='foldersize'>" + formatSize(folder.size, 0) + "</span>";
+		if (noselect) {
+			li.innerHTML = "<span class='foldername" + (folder.unseen > 0 ? " folder-hasunread" : "") + "'>" + prefix + dispname + "<span class='folderunread'>" + "</span>" + "</span>";
+		} else {
+			li.innerHTML = "<span class='foldername" + (folder.unseen > 0 ? " folder-hasunread" : "") + "'>" + prefix + "<a href='#' title='" + folder.name + "'>" + dispname + "<span class='folderunread'>" + (folder.unseen > 0 ? " (" + folder.unseen + ")" : "") + "</span></a>" + "</span>";
+			li.innerHTML += ("<span class='foldercount'>" + folder.messages + "</span><span class='foldersize'>" + formatSize(folder.size, 0) + "</span>");
+		}
+	}
+	if (!noselect) {
 		li.addEventListener('click', function() { commandSelectFolder(folder.name, false); }, {passive: true});
 	}
 	parent.appendChild(li);
@@ -1043,7 +1054,6 @@ function notifyNewMessage(msg) {
 
 	var notification = new Notification("You've got mail!", {
 		body: body,
-		//icon: '/img/logo-person.png',
 		requireInteraction: false
 	});
 	notification.onshow = function(event) {
@@ -1056,6 +1066,44 @@ function notifyNewMessage(msg) {
 		notification.close();
 		/* XXX Also fetch the message if clicked */
 	};
+}
+
+function folderExistsByName(array, name) {
+	for (var i = 0; i < array.length; i++) {
+		if (array[i].name === name) {
+			return true;
+		}
+	}
+	return false;
+}
+
+function createDummyFolders(array) {
+	/* A well behaved IMAP server probably shouldn't send orphaned hierarchies, but if the mailbox does not have a parent, append a dummy parent */
+	var origlen = array.length;
+	for (var i = 0; i < origlen; i++) {
+		var fullname = array[i].name;
+		var fullParent = ""
+		var name = fullname;
+		for (;;) {
+			var delim = name.indexOf(hierarchyDelimiter);
+			if (delim === -1) {
+				break;
+			}
+
+			var parent = name.substring(0, delim);
+			var fullParent = (fullParent.length > 0 ? (fullParent + hierarchyDelimiter) : "") + parent;
+			/* See if such a folder exists */
+			if (!folderExistsByName(array, fullParent)) {
+				console.debug(fullname + " is orphaned, creating parent: " + fullParent);
+				var dummy = {
+					name: fullParent,
+					flags: [ 'NonExistent', 'NoSelect' ],
+				};
+				array.push(dummy);
+			}
+			name = name.substring(delim + 1);
+		}
+	}
 }
 
 function moveToFrontByName(array, name) {
@@ -1081,8 +1129,34 @@ function moveToFrontByFlag(array, flag) {
 	}
 }
 
+function moveNamespacesToEnd(array) {
+	var spliced = 0;
+	/* Move Other Users and Shared Folders namespaces to end.
+	 * XXX Again we should get the namespace names from the LIST result */
+	for (i = 0; i < array.length - spliced; i++) {
+		/* Don't include hierarchy delimiter as this applies to the containers themselves */
+		if (array[i].name.startsWith("Other Users") || array[i].name.startsWith("Shared Folders")) {
+			array.push(array.splice(i, 1)[0]);
+			spliced++;
+			i--; /* Stay at same index due to splice, or we'll skip one */
+		}
+	}
+}
+
 function displayFolderName(folder) {
 	var name = folder.name;
+	var prefix = "";
+
+	/* Instead of showing the full name, show a visual hierarchy for subfolders and just the leaf mailbox name */
+	for (;;) {
+		var delim = name.indexOf(hierarchyDelimiter);
+		if (delim === -1) {
+			break;
+		}
+		prefix += "&nbsp;&nbsp;&nbsp;"
+		name = name.substring(delim + 1);
+	}
+
 	if (folder.name.indexOf("INBOX") !== -1) { /* indexOf rather than exact match, so we catch subfolder INBOXes too */
 		name = "<span class='folder-icon'>&#128229;</span> " + name;
 	} else if (folder.flags.indexOf("Sent") !== -1) {
@@ -1098,6 +1172,7 @@ function displayFolderName(folder) {
 	} else {
 		name = "<span class='folder-icon'>&#x1F5C0;</span> " + name;
 	}
+	folder.prefix = prefix;
 	return name;
 }
 
@@ -1126,11 +1201,10 @@ function drawFolderMenu() {
 	const searchParams = new URLSearchParams(url.search);
 
 	for (var name in folders) {
+		addToFolderMenu(showtotal, searchParams, root_ul, folders[name]);
 		if (folders[name].flags.indexOf("NoSelect") !== -1) {
-			/* If it's not Select'able, why show it? */
 			continue;
 		}
-		addToFolderMenu(searchParams, root_ul, folders[name]);
 		if (folders[name].unseen !== undefined) {
 			totalsize += folders[name].size;
 			totalmsg += folders[name].messages;
@@ -1195,6 +1269,10 @@ function messageClick(e, obj) {
 	}
 }
 
+function folderExists(folder) {
+	return folder.flags.indexOf("NoSelect") === -1 && folder.flags.indexOf("Noselect") === -1 && folder.flags.indexOf("NonExistent") === -1 && folder.flags.indexOf("Nonexistent") === -1;
+}
+
 ws.onmessage = function(e) {
 	var jsonData = JSON.parse(e.data);
 	console.log(jsonData);
@@ -1212,6 +1290,8 @@ ws.onmessage = function(e) {
 			if (hierarchyDelimiter === undefined) {
 				console.error("Hierarchy delimiter is undefined?");
 			}
+
+			createDummyFolders(folders);
 
 			/* Sort alphabetically first */
 			folders.sort(function(a, b) {
@@ -1237,18 +1317,24 @@ ws.onmessage = function(e) {
 			/* INBOX at very top */
 			moveToFrontByName(folders, "INBOX");
 
+			moveNamespacesToEnd(folders);
+
 			drawFolderMenu();
 			for (var name in folders) {
-				if (folders[name].flags.indexOf("NoSelect") !== -1) {
-					/* If it's not Select'able, why show it? */
-					continue;
-				}
 				/* We'll get a LIST response twice,
 				 * the first time with just folder names,
 				 * and the second time with all the STATUS details.
 				 * Don't issue the SELECT until the second time, to avoid sending it twice. */
 				allowSelection = folders[name].unseen !== undefined;
-				moveto += "<option value='" + folders[name].name + "'>" + displayFolderName(folders[name]) + "</option>";
+				var dispname = displayFolderName(folders[name]);
+
+				var noselect = !folderExists(folders[name]);
+				if (noselect) {
+					/* If \NoSelect, don't allow this to be a MOVE/COPY target */
+					moveto += "<option value='' disabled>" + folders[name].prefix + dispname + "</option>";
+				} else {
+					moveto += "<option value='" + folders[name].name + "'>" + folders[name].prefix + dispname + "</option>";
+				}
 			}
 
 			/* Now that folders are available (on page load), we can try to select the active one */

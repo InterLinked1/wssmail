@@ -60,22 +60,38 @@ a {
 	cursor: pointer;
 	background-color: #f0f0f0;
 }
+.folder-icon {
+	font-size: 0.9em;
+}
 #folders {
 	height: 100%;
-	width: 225px;
+	width: 250px;
 	overflow: auto;
 	background-color: tan;
 	float: left;
 	/* padding-left: 5px; - nope, this shifts the message list UNDERNEATH */
 }
-.folder-icon {
-	font-size: 0.9em;
-}
 #messages {
-	width: calc(100% - 225px);
+	width: calc(100% - 250px);
 	height: inherit;
 	float: left;
 	overflow: none;
+}
+#media (min-width: 1600px) {
+	#folders {
+		width: 275px;
+	}
+	#messages {
+		width: calc(100% - 275px);
+	}
+}
+#media (min-width: 1750px) {
+	#folders {
+		width: 325px;
+	}
+	#messages {
+		width: calc(100% - 325px);
+	}
 }
 #messages > div {
 	background-color: white;

@@ -51,6 +51,7 @@
  * - Forgotten attachment reminder
  * - Single-criterion sorting
  * - Reply using the same identity to which the message was addressed
+ * - Hierarchical folder display
  *
  * Very nearly supported:
  * - Sending format=flowed plain text messages
@@ -60,6 +61,7 @@
  * - Stay logged in "forever" does not work properly
  *
  * Not currently supported, but would be nice to have (future roadmap):
+ * - Collapsible subfolder trees
  * - Downloading/detaching/deleting attachments.
  * - Resuming or sending email drafts
  * - Displaying messages grouped in threads
@@ -309,10 +311,10 @@ document.addEventListener('DOMContentLoaded', function() {
 				}
 				?>
 				<div>
-					<label for="username">Username</label><input type="text" id="login-username" name="username" autocomplete="username" value=""/>
+					<label for="login-username">Username</label><input type="text" id="login-username" name="username" autocomplete="username" value=""/>
 				</div>
 				<div>
-					<label for="password">Password</label><input type="password" name="password" autocomplete="current-password" value=""/>
+					<label for="login-password">Password</label><input type="password" id="login-password" name="password" autocomplete="current-password" value=""/>
 				</div>
 
 				<div>
