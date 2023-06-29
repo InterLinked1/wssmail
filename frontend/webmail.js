@@ -803,10 +803,20 @@ function responseSelectFolder(folderinfo) {
 		console.debug(folders);
 	} else {
 		/* Update counts when we SELECT a mailbox, since we get this info for free */
-		/* XXX However, we only get the # of total messages, not # unread, so we can't update that.
-		 * Maybe server could silently do a STATUS to get # unread and send us the # unread? */
+		var changed = false;
+
+		/* The SELECT command response does not return the number of unread messages in the mailbox.
+		 * However, the backend will return it so we can update our counts
+		 * (it does a STATUS for us behind the scenes to get this information). */
 		if (folders[index].messages !== folderinfo.exists) {
 			folders[index].messages = folderinfo.exists;
+			changed = true;
+		}
+		if (folders[index].unseen !== folderinfo.unseen) {
+			folders[index].unseen = folderinfo.unseen;
+			changed = true;
+		}
+		if (changed) {
 			drawFolderMenu(); /* Redraw menu if totals changed */
 		}
 		setFolderTitle(folders[index].unseen);
