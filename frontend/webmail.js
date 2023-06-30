@@ -884,6 +884,15 @@ function setErrorFull(msg, fatal) {
 	}
 }
 
+function clearStatus() {
+	document.getElementById('errorbar').textContent = "";
+}
+
+function setStatus(msg) {
+	document.getElementById('errorbar').textContent = msg;
+	errorMsgSetTime = Date.now();
+}
+
 function setNotification(msg) {
 	setErrorFull(msg, 0);
 }
@@ -1316,6 +1325,16 @@ ws.onmessage = function(e) {
 		var response = jsonData.response;
 		if (response === "ERROR") {
 			setError(jsonData.msg);
+		} else if (response === "status") { /* Message to display in status bar */
+			if (jsonData.msg === "") {
+				clearStatus();
+			} else {
+				if (jsonData.error) {
+					setFatalError(jsonData.msg);
+				} else {
+					setStatus(jsonData.msg);
+				}
+			}
 		} else if (response === "LIST") {
 			gotlist = true;
 			var moveto = "<option value=''></option>"; /* Start it off with an empty option */
