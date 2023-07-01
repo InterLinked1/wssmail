@@ -16,6 +16,7 @@ var pageNumber = 1;
 /* Set default page size based on screen size */
 console.log("Screen height: " + window.screen.height);
 var sortOrder = null;
+var simpleFilter = null;
 var pagesize = window.screen.height > 800 ? 25 : window.screen.height > 600 ? 15 : 10;
 var viewRaw = false;
 var viewHTML = true;
@@ -88,6 +89,14 @@ function setSort(s) {
 	commandFetchList(currentPage);
 }
 
+function setFilter(s) {
+	simpleFilter = s;
+	setq('filter', s);
+	/* Do a FETCHLIST again */
+	var currentPage = getq('page');
+	commandFetchList(currentPage);
+}
+
 function setPageSize(pgsz) {
 	if (pgsz < 1) {
 		return;
@@ -126,6 +135,18 @@ ws.onopen = function(e) {
 			if (sortDropdown.options[i].value === q) {
 				sortDropdown.selectedIndex = i;
 				sortOrder = i > 0 ? q : null; /* First one is none (default) */
+				break;
+			}
+		}
+	}
+
+	q = searchParams.get("filter");
+	if (q !== undefined && q !== null) {
+		var searchDropdown = document.getElementById('option-filter');
+		for (var i = 0; i < searchDropdown.options.length; i++) {
+			if (searchDropdown.options[i].value === q) {
+				searchDropdown.selectedIndex = i;
+				simpleFilter = i > 0 ? q : null; /* First one is none (default) */
 				break;
 			}
 		}
@@ -236,7 +257,8 @@ function commandSelectFolder(folder, autoselected) {
 		command: "SELECT",
 		folder: folder,
 		pagesize: parseInt(pagesize),
-		sort: sortOrder
+		sort: sortOrder,
+		filter: simpleFilter,
 	}
 	payload = JSON.stringify(payload);
 	ws.send(payload);
@@ -277,10 +299,11 @@ function commandFetchList(page) {
 		command: "FETCHLIST",
 		page: parseInt(pageNumber),
 		pagesize: parseInt(pagesize),
-		sort: sortOrder
+		sort: sortOrder,
+		filter: simpleFilter,
 	}
-	payload = JSON.stringify(payload);
 	console.debug(payload);
+	payload = JSON.stringify(payload);
 	ws.send(payload);
 }
 
@@ -1771,6 +1794,7 @@ document.getElementById('btn-copy').addEventListener('click', copy);
 document.getElementById('btn-download').addEventListener('click', exportMessage);
 
 document.getElementById('option-sort').addEventListener('change', function() { setSort(this.value); }, {passive: true});
+document.getElementById('option-filter').addEventListener('change', function() { setFilter(this.value); }, {passive: true});
 document.getElementById('option-pagesize').addEventListener('change', function() { setPageSize(this.value); }, {passive: true});
 document.getElementById('option-preview').addEventListener('change', function() { togglePreview(this); }, {passive: true});
 document.getElementById('option-html').addEventListener('change', function() { toggleHTML(this); }, {passive: true});

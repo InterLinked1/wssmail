@@ -24,6 +24,7 @@
  *   made possible by the use of websockets, rather than using AJAX or full page (re)loads.
  * - Lightweight interface, not bloated, yet designed with power users in mind. Ideal for older browsers and slower connections.
  * - Message listings include sequence numbers, UIDs, and message sizes, to aid in debugging.
+ * - Basic filtering capabilities (show only unseen, recent messages, etc.)
  * - Status bar includes UIDVALIDITY and UIDNEXT of selected mailboxes
  * - View total number of messages in and size of each mailbox (folder)
  * - Visual identification of marked mailboxes and recent messages
@@ -838,6 +839,12 @@ startHTML();
 				<option value="from-desc">From &darr;</option>
 				<option value="to-asc">To &uarr;</option>
 				<option value="to-desc">To &darr;</option>
+			</select>
+			<label for="option-filter" title="Simple filter">Filter</label>
+			<select id="option-filter" name="option-filter">
+				<option value="none">None</option>
+				<option value="recent">Recent</option>
+				<option value="unseen">Unseen</option>
 			</select>
 			<label for="option-pagesize" title="Number of messages to show on each page">Pg. Sz</label>
 			<select id="option-pagesize" name="option-pagesize">
