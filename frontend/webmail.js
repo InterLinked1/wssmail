@@ -837,7 +837,7 @@ function formatSize(bytes, round) {
 		if (bytes > 1048576) {
 			var mb = bytes / 1048576;
 			if (round) {
-				mb = Math.round(kb * 10) / 10; /* Round to 1 decimal pt */
+				mb = Math.round(mb * 10) / 10; /* Round to 1 decimal pt */
 			} else {
 				mb = Math.round(mb);
 			}
