@@ -137,6 +137,8 @@ a {
 }
 .folder-current { background-color: #BDA27E; }
 .folder-hasunread, .messagelist-unread { font-weight: bold; }
+.folder-marked { background-color: #f9aeae; }
+.messagelist-recent { background-color: #f9aeae; }
 .foldername, .foldercount, .foldersize { display: table-cell; padding: 1px 3px; }
 .foldercount, .foldersize, .message-size { text-align: right; }
 #messagepages { text-align: center; }

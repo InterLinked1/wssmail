@@ -210,15 +210,17 @@ function addToFolderMenu(details, searchParams, parent, folder) {
 	var dispname = displayFolderName(folder);
 	var prefix = folder.prefix;
 	var noselect = !folderExists(folder);
+	var marked = folder.flags.indexOf("Marked") !== -1;
 
 	if (!details) {
 		/* This is just the preliminary list */
 		li.innerHTML = "<span class='foldername'>" + prefix + dispname + "</span>";
 	} else {
+		var extraClasses = (folder.unseen > 0 ? " folder-hasunread" : "") + (marked ? " folder-marked" : "");
 		if (noselect) {
-			li.innerHTML = "<span class='foldername" + (folder.unseen > 0 ? " folder-hasunread" : "") + "'>" + prefix + dispname + "<span class='folderunread'>" + "</span>" + "</span>";
+			li.innerHTML = "<span class='foldername" + extraClasses + "'>" + prefix + dispname + "<span class='folderunread'>" + "</span>" + "</span>";
 		} else {
-			li.innerHTML = "<span class='foldername" + (folder.unseen > 0 ? " folder-hasunread" : "") + "'>" + prefix + "<a href='#' title='" + folder.name + "'>" + dispname + "<span class='folderunread'>" + (folder.unseen > 0 ? " (" + folder.unseen + ")" : "") + "</span></a>" + "</span>";
+			li.innerHTML = "<span class='foldername" + extraClasses + "'>" + prefix + "<a href='#' title='" + folder.name + "'>" + dispname + "<span class='folderunread'>" + (folder.unseen > 0 ? " (" + folder.unseen + ")" : "") + "</span></a>" + "</span>";
 			li.innerHTML += ("<span class='foldercount'>" + folder.messages + "</span><span class='foldersize'>" + formatSize(folder.size, 0) + "</span>");
 		}
 	}
@@ -1588,6 +1590,9 @@ ws.onmessage = function(e) {
 				if (!flags.includes("\\Seen")) {
 					/* Message is unread */
 					tr.classList.add("messagelist-unread");
+				}
+				if (flags.includes("\\Recent")) {
+					tr.classList.add("messagelist-recent");
 				}
 
 				var td;

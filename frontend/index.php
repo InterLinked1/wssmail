@@ -26,6 +26,7 @@
  * - Message listings include sequence numbers, UIDs, and message sizes, to aid in debugging.
  * - Status bar includes UIDVALIDITY and UIDNEXT of selected mailboxes
  * - View total number of messages in and size of each mailbox (folder)
+ * - Visual identification of marked mailboxes and recent messages
  * - Advanced message operations: copying messages to other mailboxes.
  * - RFC 2177 IMAP IDLE (realtime notifications)
  * - RFC 6186 autoconfiguration
