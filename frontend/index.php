@@ -111,6 +111,7 @@ function logout() {
 
 ini_set('session.gc_maxlifetime', 2678400); /* 1 month */
 ini_set('session.cookie_lifetime', 2678400);
+ini_set('session.cache_expire', 65535); /* ~18 hours */
 if (isset($_POST['loginlimit'])) {
 	$maxlifetime = (int) $_POST['loginlimit'];
 	if ($maxlifetime < 0) {
@@ -812,6 +813,8 @@ startHTML();
 			<input id="btn-markunread" type="button" title="Mark Unread" value="&#128233;"/>
 			<input id="btn-markread" type="button" title="Mark Read" value="&#9993;"/>
 			&nbsp;
+			<input id="btn-flag" type="button" title="Flag" value="&#9873;"/>
+			<input id="btn-unflag" type="button" title="Unflag" value="&#127937;"/>
 			<input id="btn-junk" type="button" title="Junk/Spam" value="&#128293;"/>
 			<input id="btn-delete" type="button" title="Delete" value="&#10060;"/>
 			<input id="btn-expunge" type="button" value="Expunge"/>

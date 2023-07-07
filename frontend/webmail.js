@@ -202,7 +202,9 @@ function processSettings() {
 		document.getElementById('btn-forward').value = "Forward";
 		document.getElementById('btn-markunread').value = "Mark Unread";
 		document.getElementById('btn-markread').value = "Mark Read";
-		document.getElementById('btn-junk').value = "Mark Junk";
+		document.getElementById('btn-flag').value = "Flag";
+		document.getElementById('btn-unflag').value = "Unflag";
+		document.getElementById('btn-junk').value = "Junk";
 		document.getElementById('btn-delete').value = "Delete";
 		//document.getElementById('option-extreq').value = "Ext Content";
 		//document.getElementById('btn-download').value = "Download";
@@ -577,6 +579,36 @@ function markRead() {
 	payload = JSON.stringify(payload);
 	ws.send(payload);
 	implicitSeenUnseen(selected, true);
+}
+
+function markFlagged() {
+	var selected = getSelectedUIDs();
+	if (selected.length < 1) {
+		setError("No messages currently selected!");
+		return;
+	}
+	console.log("Mark messages as flagged");
+	var payload = {
+		command: "FLAG",
+		uids: selected
+	}
+	payload = JSON.stringify(payload);
+	ws.send(payload);
+}
+
+function markUnflagged() {
+	var selected = getSelectedUIDs();
+	if (selected.length < 1) {
+		setError("No messages currently selected!");
+		return;
+	}
+	console.log("Mark messages as not flagged");
+	var payload = {
+		command: "UNFLAG",
+		uids: selected
+	}
+	payload = JSON.stringify(payload);
+	ws.send(payload);
 }
 
 function markDeleted() {
@@ -1786,6 +1818,8 @@ document.getElementById('btn-replyall').addEventListener('click', replyAll);
 document.getElementById('btn-forward').addEventListener('click', forward);
 document.getElementById('btn-markunread').addEventListener('click', markUnread);
 document.getElementById('btn-markread').addEventListener('click', markRead);
+document.getElementById('btn-flag').addEventListener('click', markFlagged);
+document.getElementById('btn-unflag').addEventListener('click', markUnflagged);
 document.getElementById('btn-junk').addEventListener('click', junkMessage);
 document.getElementById('btn-delete').addEventListener('click', deleteMessage);
 document.getElementById('btn-expunge').addEventListener('click', expungeFolder);
