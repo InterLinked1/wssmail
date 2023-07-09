@@ -22,6 +22,8 @@ var viewRaw = false;
 var viewHTML = true;
 var allowExternalRequests = false;
 
+var allSelected = false;
+var lastNumPages = 0;
 var currentUID = 0;
 var doingExport = false;
 
@@ -310,6 +312,9 @@ function commandFetchList(page) {
 }
 
 function getSelectedUIDs() {
+	if (allSelected) {
+		return "1:*";
+	}
 	var uids = new Array();
 	var checkboxes = document.getElementsByName('msg-sel-uid');
 	for (var checkbox of checkboxes) {
@@ -319,6 +324,13 @@ function getSelectedUIDs() {
 	}
 	console.debug(uids);
 	return uids;
+}
+
+function selectAllUIDs() {
+	var checkboxes = document.getElementsByName('msg-sel-uid');
+	for (var checkbox of checkboxes) {
+		checkbox.checked = true;
+	}
 }
 
 function unselectAllUIDs() {
@@ -1338,9 +1350,28 @@ function doDownload(filename, content) {
 
 var lastCheckedIndex = null;
 
+function selectAllClick(e, obj) {
+	if (allSelected) {
+		/* Unselect everything */
+		unselectAllUIDs();
+		allSelected = false;
+		obj.checked = false;
+	} else {
+		selectAllUIDs();
+		/* If there's more than one page, clarify what the user wants to do */
+		if (lastNumPages > 1 && confirm("Select all messages in this folder?\nOK: Entire folder\nCancel: This page only")) {
+			allSelected = true;
+		} else {
+			allSelected = false;
+		}
+	}
+}
+
 /* Multi-message range selection */
 function messageClick(e, obj) {
 	var index = parseInt(obj.getAttribute('index'));
+	allSelected = false;
+	document.getElementById('select-all-cbox').checked = false;
 	if (lastCheckedIndex !== null && e.shiftKey) { /* Shift selection */
 		/* Check all the messages in the range between the two seqnos */
 		var a, b;
@@ -1373,6 +1404,12 @@ function messageClick(e, obj) {
 
 function folderExists(folder) {
 	return folder.flags.indexOf("NoSelect") === -1 && folder.flags.indexOf("Noselect") === -1 && folder.flags.indexOf("NonExistent") === -1 && folder.flags.indexOf("Nonexistent") === -1;
+}
+
+function addColumnHeading(tr, name) {
+	var th = document.createElement('th');
+	th.innerHTML = name; /* Can't use textContent, because some of these are escape codes */
+	tr.appendChild(th);
 }
 
 ws.onmessage = function(e) {
@@ -1625,6 +1662,7 @@ ws.onmessage = function(e) {
 			 * Currently, the code really only does that on LIST. We need a better mechanism for updating the page title frequently. */
 		} else if (response === "FETCHLIST") {
 			lastCheckedSeqno = null;
+			allSelected = false;
 			if (jsonData.cause === "IDLE" || jsonData.cause === "EXISTS" || jsonData.cause === "EXPUNGE") {
 				/* Don't mess with the preview pane. */
 				/* Just refresh the message list for now. We'll get an EXISTS response
@@ -1632,7 +1670,33 @@ ws.onmessage = function(e) {
 			} else {
 				endMessagePreview(); /* Stop preview of old message */
 			}
-			document.getElementById('messagetable').innerHTML = '<tr><th></th><th>#</th><th>UID &#9660;</th><th></th><th></th><th></th><th></th><th>Subject</th><th>From</th><th>Recipient</th><th>Received</th><th>Sent</th><th>Size</th></tr>'; /* First, clear any existing */
+			/* First, clear any existing */
+			document.getElementById('messagetable').innerHTML = ''; 
+			var tr = document.createElement('tr');
+
+			var checkboxtd;
+			checkboxtd = document.createElement('td');
+			var cinput = document.createElement('input');
+			cinput.setAttribute('id', 'select-all-cbox');
+			cinput.setAttribute('type', 'checkbox');
+			cinput.addEventListener('click', function(e) { selectAllClick(e, this); }, {passive: true});
+			checkboxtd.appendChild(cinput);
+			tr.appendChild(checkboxtd);
+
+			addColumnHeading(tr, '#');
+			addColumnHeading(tr, 'UID &#9660;');
+			addColumnHeading(tr, ''); /* Attachments? */
+			addColumnHeading(tr, ''); /* Flagged? */
+			addColumnHeading(tr, ''); /* Deleted? */
+			addColumnHeading(tr, ''); /* Priority? */
+			addColumnHeading(tr, 'Subject');
+			addColumnHeading(tr, 'From');
+			addColumnHeading(tr, 'Recipient');
+			addColumnHeading(tr, 'Received');
+			addColumnHeading(tr, 'Sent');
+			addColumnHeading(tr, 'Size');
+			document.getElementById('messagetable').appendChild(tr);
+
 			/* Construct message list table */
 			setQuota(jsonData.quota, jsonData.quotaused);
 			var epoch = Date.now();
@@ -1651,7 +1715,6 @@ ws.onmessage = function(e) {
 				}
 
 				var td;
-
 				td = document.createElement('td');
 				var input = document.createElement('input');
 				input.setAttribute('id', 'msg-sel-index-' + index);
@@ -1766,6 +1829,7 @@ ws.onmessage = function(e) {
 			pstr += "</p>";
 			document.getElementById('messagepages').innerHTML = pstr;
 			var pagesparent = document.getElementById('messagepages-p');
+			lastNumPages = jsonData.numpages;
 			if (jsonData.numpages > 1) {
 				/* Pagination required */
 				/* We have to do this the clunky way of appending all these children due to the event listeners we need to attach. */
