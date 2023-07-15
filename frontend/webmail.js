@@ -255,6 +255,20 @@ function addToFolderMenu(details, searchParams, parent, folder) {
 	parent.appendChild(li);
 }
 
+function checkNotificationPermissions() {
+	/* Can only ask for permission in response to a user gesture. This is probably the first click a user will make. */
+	checkedNotifyPerm = true;
+	console.log("Notification permission: " + Notification.permission);
+	/* Also note that in Chrome icognito mode (starting v49), notifications are not allowed.
+	 * Can work in insecure origins if configured, otherwise. */
+	if (Notification.permission === "denied") {
+		console.error("Notification permission denied");
+	} else if (Notification.permission !== "granted") {
+		console.log("Requesting notification permission");
+		Notification.requestPermission();
+	}
+}
+
 function commandSelectFolder(folder, autoselected) {
 	setq('page', 1); /* Reset to first page of whatever folder was selected */
 	var payload = {
@@ -267,15 +281,7 @@ function commandSelectFolder(folder, autoselected) {
 	payload = JSON.stringify(payload);
 	ws.send(payload);
 	if (!autoselected && !checkedNotifyPerm) {
-		/* Can only ask for permission in response to a user gesture. This is probably the first click a user will make. */
-		checkedNotifyPerm = true;
-		console.log("Notification permission: " + Notification.permission);
-		/* Also note that in Chrome icognito mode (starting v49), notifications are not allowed.
-		 * Can work in insecure origins if configured, otherwise. */
-		if (Notification.permission !== "granted" && Notification.permission !== 'denied') {
-			console.log("Requesting notification permission");
-			Notification.requestPermission();
-		}
+		checkNotificationPermissions();
 	}
 }
 
@@ -889,6 +895,12 @@ function responseSelectFolder(folderinfo) {
 			drawFolderMenu(); /* Redraw menu if totals changed */
 		}
 		setFolderTitle(folders[index].unseen);
+
+		/* If the folder was previously Marked, set it to not be Marked anymore, since we just looked at it. */
+		var markedindex = folders[index].flags.indexOf("Marked");
+		if (markedindex !== -1) {
+			folders[index].flags.splice(markedindex, 1); /* Remove this flag */
+		}
 	}
 
 	/* XXX If we do a FETCHLIST (e.g. on IDLE update), these aren't updated (UIDNEXT in particular, for EXISTS) */
@@ -1128,17 +1140,45 @@ function listTruncate(text, limit) {
 	return text;
 }
 
-function notifyNewMessage(msg) {
-
-	setNotification("You've got mail!");
-
+function canDisplayNotifications() {
 	if (!("Notification" in window)) {
 		console.error("Browser does not support notifications");
+		return false;
+	}
+	if (Notification.permission !== "granted") {
+		console.error("Can't display notification, permission not granted");
+		return false;
+	}
+	return true;
+}
+
+function notifyNewMessageOther(fname) {
+	setNotification("You've got mail!");
+	if (!canDisplayNotifications()) {
 		return;
 	}
 
-	if (Notification.permission !== "granted") {
-		console.error("Can't display notification, permission not granted");
+	var body = "New message in " + fname;
+	var notification = new Notification("You've got mail!", {
+		body: body,
+		requireInteraction: false
+	});
+	notification.onshow = function(event) {
+		setTimeout(function () {
+			notification.close();
+		}, 5000);
+	};
+	notification.onclick = function(event) {
+		window.focus();
+		notification.close();
+		commandSelectFolder(fname, false); /* Move to this folder if notification is clicked */
+	};
+	console.debug("Dispatched notification");
+}
+
+function notifyNewMessage(msg) {
+	setNotification("You've got mail!");
+	if (!canDisplayNotifications()) {
 		return;
 	}
 
@@ -1164,6 +1204,16 @@ function notifyNewMessage(msg) {
 		notification.close();
 		/* XXX Also fetch the message if clicked */
 	};
+	console.debug("Dispatched notification");
+}
+
+function getFolder(fname) {
+	for (var name in folders) {
+		if (folders[name].name === fname) {
+			return folders[name];
+		}
+	}
+	return null;
 }
 
 function folderExistsByName(array, name) {
@@ -1493,6 +1543,36 @@ ws.onmessage = function(e) {
 
 			/* Update move to dropdown with folders */
 			document.getElementById('option-moveto').innerHTML = moveto;
+		} else if (response === "STATUS") { /* Sent if a NOTIFY command is active */
+			/* Update the folder in the folder list, and mark it as "recently updated" */
+			var f = getFolder(jsonData.name);
+			if (f === null) {
+				console.error("Got STATUS message for folder " + jsonData.name);
+			} else {
+				var setmarked = false;
+				/* This STATUS is somewhat incremental: not all of the fields are necessarily available. Update what's provided. */
+				if (jsonData.messages !== undefined) {
+					f.messages = jsonData.messages;
+				}
+				if (jsonData.unseen !== undefined) {
+					if (jsonData.unseen > f.unseen) {
+						setmarked = true; /* New message! */
+					}
+					f.unseen = jsonData.unseen;
+				}
+				if (jsonData.size !== undefined) {
+					f.size = jsonData.size;
+				}
+				if (setmarked) {
+					/* Mark it as marked so it'll show up specially, since there's a new message we haven't seen */
+					if (f.flags.indexOf("Marked") === -1) {
+						f.flags.push("Marked");
+					}
+					/* If configured to show desktop alert for new messages in other folders, do so */
+					notifyNewMessageOther(f.name);
+				}
+				drawFolderMenu(); /* Redraw folder list */
+			}
 		} else if (response === "SELECT") {
 			pageNumber = 1; /* Reset to 1 whenever we successfully move to a new folder */
 			responseSelectFolder(jsonData);

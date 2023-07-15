@@ -29,7 +29,8 @@
  * - View total number of messages in and size of each mailbox (folder)
  * - Visual identification of marked mailboxes and recent messages
  * - Advanced message operations: copying messages to other mailboxes.
- * - RFC 2177 IMAP IDLE (realtime notifications)
+ * - RFC 2177 IMAP IDLE (realtime notifications for current folder)
+ * - RFC 5465 IMAP NOTIFY (realtime notifications for other folders)
  * - RFC 6186 autoconfiguration
  * - Raw message downloading (exporting)
  *
@@ -151,6 +152,7 @@ function startHTML() {
 	<link rel="stylesheet" type="text/css" href="main.css">
 	<link rel="stylesheet" type="text/css" href="form.css">
 	<link rel="stylesheet" type="text/css" href="message.css">
+	<link rel="icon" href="data:,"> <!-- Inhibit Chrome's automatic favicon download -->
 </head>
 <body>
 	<?php
@@ -584,7 +586,7 @@ function send_message($send) {
 	/* comma-delimited */
 	$msg .= "To: $from\r\n";
 	$msg .= "Content-Type: text/plain; format=flowed\r\n";
-	$msg .= "User-Agent: $progname $progver (PHP)\r\n";
+	$msg .= "User-Agent: $progname $progver (https://github.com/InterLinked1/wssmail)\r\n";
 	$msg .= "\r\n";
 	/* Create a format=flowed plain text body (RFC 3676 - 4.2) */
 	$ffbody = "";
