@@ -22,6 +22,9 @@ var viewRaw = false;
 var viewHTML = true;
 var allowExternalRequests = false;
 
+var lastMoveTarget = null;
+var totalSelected = 0;
+var unseenSelected = 0;
 var allSelected = false;
 var lastNumPages = 0;
 var currentUID = 0;
@@ -323,9 +326,17 @@ function getSelectedUIDs() {
 	}
 	var uids = new Array();
 	var checkboxes = document.getElementsByName('msg-sel-uid');
+	totalSelected = unseenSelected = 0;
 	for (var checkbox of checkboxes) {
 		if (checkbox.checked) {
 			uids.push(parseInt(checkbox.value));
+			totalSelected++;
+			/* Is it unread?
+			 * checkbox is an input. Its parent is a td and its parent is a tr.
+			 * If the tr has the class messagelist-unread, it's unseen */
+			if (checkbox.parentNode.parentNode.classList.contains("messagelist-unread")) {
+				unseenSelected++;
+			}
 		}
 	}
 	console.debug(uids);
@@ -526,17 +537,15 @@ function forward() {
 
 function adjustFolderCount(name, difftotal, diffunread) {
 	console.log("Applying folder adjustment: " + name + " (" + difftotal + "/" + diffunread + ")");
-	for (var f in folders) {
-		if (folders[f].name === selectedFolder) {
-			var folder = folders[f];
-			folder.messages += difftotal;
-			folder.unseen += diffunread;
-			setFolderTitle(folder.unseen); /* Update page title with new unread count */
-			drawFolderMenu(); /* Redraw folder list */
-			return;
-		}
+	var f = getFolder(selectedFolder);
+	if (f === null) {
+		console.error("Couldn't find current folder (" + selectedFolder.name + ")in folder list?");
+	} else {
+		f.messages += difftotal;
+		f.unseen += diffunread;
+		setFolderTitle(f.unseen); /* Update page title with new unread count */
+		drawFolderMenu(); /* Redraw folder list */
 	}
-	console.error("Couldn't find current folder (" + selectedFolder.name + ")in folder list?");
 }
 
 function implicitSeenUnseen(selected, markread) {
@@ -793,6 +802,7 @@ function moveTo(newfolder) {
 		uids: selected,
 		folder: newfolder
 	}
+	lastMoveTarget = newfolder;
 	payload = JSON.stringify(payload);
 	ws.send(payload);
 }
@@ -1900,11 +1910,23 @@ ws.onmessage = function(e) {
 				document.getElementById('messagetable').appendChild(tr);
 			}
 
-			/* Construct the page list navigation, based on page size and current page */
-			var total = folders[jsonData.mailbox] ? folders[jsonData.mailbox].messages : 0;
-			if (total === undefined || total === null) {
-				console.error("Couldn't find mailbox " + jsonData.mailbox);
+			/* Update folder counts if needed */
+			if (totalSelected > 0 && jsonData.cause === "MOVE") {
+				var f = getFolder(selectedFolder);
+				var f2 = getFolder(lastMoveTarget);
+				/* If the cause was "MOVE", that means we selected some messages and moved them elsewhere.
+				 * In this case, we keep traack of how many messages were selected, and if we subtract
+				 * that here, then that'll probably update this count correctly.
+				 * Furthermore, if this is a MOVE, we can add the messages to the move target. */
+				f.messages -= totalSelected;
+				f2.messages += totalSelected;
+				f.unseen -= unseenSelected;
+				f2.unseen += unseenSelected;
+				totalSelected = unseenSelected = 0;
+				drawFolderMenu();
 			}
+
+			/* Construct the page list navigation, based on page size and current page */
 			var pstr = "<p id='messagepages-p'>";
 			pstr += "</p>";
 			document.getElementById('messagepages').innerHTML = pstr;
