@@ -599,7 +599,7 @@ function send_message($send) {
 		}
 		/* Need to space stuff.
 		 * Could use str_starts_with, but use substring for <8 compatibility */
-		if (substr($line, 0, 1) === " " || substr($line, 0, 4, "From") || substr($line, 0, 1, ">")) {
+		if (substr($line, 0, 1) === " " || substr($line, 0, 4) === "From" || substr($line, 0, 1) === ">") {
 			$line = " " . $line;
 		}
 		/* Now it's deterministic
