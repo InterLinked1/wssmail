@@ -901,15 +901,17 @@ function responseSelectFolder(folderinfo) {
 			folders[index].unseen = folderinfo.unseen;
 			changed = true;
 		}
-		if (changed) {
-			drawFolderMenu(); /* Redraw menu if totals changed */
-		}
 		setFolderTitle(folders[index].unseen);
 
 		/* If the folder was previously Marked, set it to not be Marked anymore, since we just looked at it. */
 		var markedindex = folders[index].flags.indexOf("Marked");
 		if (markedindex !== -1) {
 			folders[index].flags.splice(markedindex, 1); /* Remove this flag */
+			changed = true;
+		}
+
+		if (changed) {
+			drawFolderMenu(); /* Redraw menu if totals changed */
 		}
 	}
 
