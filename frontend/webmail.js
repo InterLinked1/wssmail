@@ -1717,24 +1717,27 @@ ws.onmessage = function(e) {
 				}
 				frame.setAttribute("sandbox", "");
 				frame.contentWindow.document.open('text/html');
+				frame.contentWindow.document.write(body);
+				frame.contentWindow.document.close();
+
 				if (!allowExternalRequests) {
-					frame.setAttribute("csp", "default-src 'none'; img-src 'none';"); /* XXX Doesn't have any effect, so use a CSP instead: */
+					//frame.setAttribute("csp", "default-src 'none'; img-src 'none';"); /* XXX Doesn't have any effect, so use a CSP instead: */
 
 					/* unsafe-inline isn't unsafe here, it's actually exactly what we want.
 					 * Load any resources in the content itself, and prohibit making any external requests.
 					 * This will prevent tracking, etc. since no external requests can be made,
 					 * and it can be a big bandwidth saver too. */
-					var csp = "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'self' 'unsafe-inline';\">";
-					/* The meta tag must be inserted inside the head tag or it will be ignored */
-					var head = body.indexOf("<head>");
-					if (head !== -1) {
-						body = body.substring(0, head) + "<head>" + csp + body.substring(head + 6);
-					} else {
-						body = "<head>" + csp + "</head>" + body;
-					}
+					/* Content-Security-Policy */
+					var csp = frame.contentWindow.document.createElement('meta');
+					csp.setAttribute('http-equiv', 'Content-Security-Policy');
+					csp.setAttribute('content', "default-src 'self' font-src 'self' 'unsafe-inline';");
+					/* Even if there's no head tag in the HTML, the browser will autocreate one */
+					frame.contentWindow.document.head.insertBefore(csp, frame.contentWindow.document.head.firstChild);
+					/* Even if an adversarial CSP meta tag is included in the message, CSPs are additive,
+					 * so it can only be more restrictive than what we've already set:
+					 * https://csplite.com/csp67/#multiple_CSP */
 				}
-				frame.contentWindow.document.write(body);
-				frame.contentWindow.document.close();
+
 				/* If no font specified, use a sans-serif font by default */
 				var defaultcss = frame.contentWindow.document.createElement('style');
 				defaultcss.innerHTML = "body { font-family: sans-serif; }";
