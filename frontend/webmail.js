@@ -1784,6 +1784,8 @@ ws.onmessage = function(e) {
 			addColumnHeading(tr, ''); /* Flagged? */
 			addColumnHeading(tr, ''); /* Deleted? */
 			addColumnHeading(tr, ''); /* Priority? */
+			addColumnHeading(tr, ''); /* Answered? */
+			addColumnHeading(tr, ''); /* Forwarded? */
 			addColumnHeading(tr, 'Subject');
 			addColumnHeading(tr, 'From');
 			addColumnHeading(tr, 'Recipient');
@@ -1859,6 +1861,14 @@ ws.onmessage = function(e) {
 				td = document.createElement('td');
 				var priority = jsonData.data[i].priority;
 				td.innerHTML = (priority > 0 ? priority < 3 ? "<span class='priority-high'>!</span>" : priority > 3 ? "<span class='priority-low'>&darr;</span>" : "" : "")
+				tr.appendChild(td);
+
+				td = document.createElement('td');
+				td.innerHTML = flags.includes("\\Answered") ? "<span class='msg-answered'>&larr;</span>" : "";
+				tr.appendChild(td);
+
+				td = document.createElement('td');
+				td.innerHTML = flags.includes("$Forwarded") ? "<span class='msg-forwarded'>&rarr;</span>" : "";
 				tr.appendChild(td);
 
 				ahref = document.createElement('a');
