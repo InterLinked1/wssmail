@@ -589,7 +589,9 @@ function markUnread() {
 	}
 	payload = JSON.stringify(payload);
 	ws.send(payload);
-	implicitSeenUnseen(selected, false);
+	if (selected !== "1:*") {
+		implicitSeenUnseen(selected, true);
+	}
 }
 
 function markRead() {
@@ -605,7 +607,9 @@ function markRead() {
 	}
 	payload = JSON.stringify(payload);
 	ws.send(payload);
-	implicitSeenUnseen(selected, true);
+	if (selected !== "1:*") {
+		implicitSeenUnseen(selected, true);
+	}
 }
 
 function markFlagged() {
@@ -1574,6 +1578,9 @@ ws.onmessage = function(e) {
 				}
 				if (jsonData.size !== undefined) {
 					f.size = jsonData.size;
+				}
+				if (jsonData.recent !== undefined) {
+					setmarked &= jsonData.recent;
 				}
 				if (setmarked) {
 					/* Mark it as marked so it'll show up specially, since there's a new message we haven't seen */
