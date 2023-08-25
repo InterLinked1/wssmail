@@ -590,7 +590,7 @@ function markUnread() {
 	payload = JSON.stringify(payload);
 	ws.send(payload);
 	if (selected !== "1:*") {
-		implicitSeenUnseen(selected, true);
+		implicitSeenUnseen(selected, false);
 	}
 }
 
@@ -1737,7 +1737,7 @@ ws.onmessage = function(e) {
 					/* Content-Security-Policy */
 					var csp = frame.contentWindow.document.createElement('meta');
 					csp.setAttribute('http-equiv', 'Content-Security-Policy');
-					csp.setAttribute('content', "default-src 'self' font-src 'self' 'unsafe-inline';");
+					csp.setAttribute('content', "default-src 'self'; font-src 'self' 'unsafe-inline';");
 					/* Even if there's no head tag in the HTML, the browser will autocreate one */
 					frame.contentWindow.document.head.insertBefore(csp, frame.contentWindow.document.head.firstChild);
 					/* Even if an adversarial CSP meta tag is included in the message, CSPs are additive,
