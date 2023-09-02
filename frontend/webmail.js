@@ -1028,8 +1028,13 @@ function setQuota(total, used) {
 		console.log("Quota usage unavailable for this mailbox");
 		return;
 	}
-	var percent = (100 * used / total).toFixed(1);
-	var p = "" + used + "/" + total + " KB (" + percent + "%)";
+	var percent = 0;
+	if (total > 0) {
+		percent = (100 * used / total).toFixed(1);
+		var p = "" + used + "/" + total + " KB (" + percent + "%)";
+	} else {
+		var p = used + " KB";
+	}
 	document.getElementById('quota').textContent = p;
 	if (percent > 95) {
 		document.getElementById('quota').classList.add("quota-warning");
@@ -1622,7 +1627,6 @@ ws.onmessage = function(e) {
 			lastreferences = jsonData.references !== undefined ? jsonData.references : "";
 
 			if (!viewRaw) {
-				/* XXX XSS escaping needed for all this, plus HTML body */
 				msg += "<div id='msg-headers'>";
 				msg += "<div class='msg-sent'><span class='hdr-name'>Date</span><span class='hdr-val'>" + formatDate(0, jsonData.sent) + "</span></div>";
 				msg = displayHeader(msg, "From", jsonData.from);
@@ -1760,8 +1764,6 @@ ws.onmessage = function(e) {
 			implicitSeenUnseen(getSelectedUIDs(), true);
 		} else if (response === "EXISTS") {
 			notifyNewMessage(jsonData);
-			/* XXX Along with IDLE updates, we really want to update the page title with the new unread count!!!!
-			 * Currently, the code really only does that on LIST. We need a better mechanism for updating the page title frequently. */
 		} else if (response === "FETCHLIST") {
 			lastCheckedSeqno = null;
 			allSelected = false;
