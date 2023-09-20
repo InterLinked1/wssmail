@@ -56,13 +56,15 @@ No configuration is required of the backend (apart from the WebSocket server por
 
 The frontend requires the PHP `imap` and `openssl` extensions for SMTP. Please make sure they are enabled.
 
-To install the frontend, navigate to the directory that will serve the webmail application, then run:
+To install the frontend, you will need Composer (for PHPMailer). You can navigate to the directory that will serve the webmail application, then run:
 ```
 wget https://raw.githubusercontent.com/composer/getcomposer.org/main/web/installer -O - -q | php -- --quiet
 php composer.phar require phpmailer/phpmailer
 ```
 
-Then, clone or copy the contents of the `frontend` directory into the above directory.
+Then, clone or copy the contents of this repository into the above directory.
+
+Alternately, if you already have PHPMailer via Composer on your system, you can specify the path to the autoload file in `config.php`.
 
 Basic configuration of your frontend web server is required for the frontend site. Apart from serving the frontend files, WebSocket connections to your frontend host will also need to be reverse proxied to the LBBS WebSocket server. This could be done as follows, for an Apache HTTP virtualhost:
 

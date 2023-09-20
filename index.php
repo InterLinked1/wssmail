@@ -83,18 +83,26 @@
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
-require('vendor/autoload.php');
-
 if (file_exists('config.php')) {
 	require_once('config.php');
 }
 
+if (isset($settings['composer_autoload_path'])) {
+	require_once($settings['composer_autoload_path']);
+} else if (file_exists('vendor/autoload.php')) {
+	require_once('vendor/autoload.php');
+} else {
+	die("Composer path not specified and not autodetected. Please install it!");
+}
+
+/* phpversion() gives us M.m.p, we only want M.m */
+$mmVersion = substr(phpversion(), 0, 3);
+$iniPATH = "/etc/php/$mmVersion/apache2/php.ini";
+
 if (!extension_loaded('imap')) {
-	fprintf(STDERR, "PHP imap extension is not available. Please install it!");
-	die();
+	die("PHP imap extension is not available. You may need to install it (e.g. apt-get install php-imap) or uncomment extension=imap in $iniPATH (and restart your web server)");
 } else if (!extension_loaded('openssl')) {
-	fprintf(STDERR, "PHP openssl extension is not available. Please install it!");
-	die();
+	die("PHP openssl extension is not available. You may need to install it or uncomment extension=openssl in $iniPATH (and restart your web server)");
 }
 
 function logout() {
