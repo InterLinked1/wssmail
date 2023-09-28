@@ -62,6 +62,8 @@ wget https://raw.githubusercontent.com/composer/getcomposer.org/main/web/install
 php composer.phar require phpmailer/phpmailer
 ```
 
+Alternately, you can run `php composer.phar install` instead of naming PHPMailer explicitly.
+
 Then, clone or copy the contents of this repository into the above directory.
 
 Alternately, if you already have PHPMailer via Composer on your system, you can specify the path to the autoload file in `config.php`.
@@ -75,6 +77,16 @@ RewriteRule /(.*)           ws://localhost:8143/webmail [P,L]
 ```
 
 (This assumes that 8143 is your WebSocket port, as configured in LBBS's `net_ws.conf`). Note that this connection is not encrypted, but this is a loopback connection so that does not matter.
+
+The `php-imap` extension is also required, for SMTP functionality. You can ensure the Apache-related dependencies are satisfied by running the following:
+
+```
+apt-get install php-imap
+a2enmod rewrite
+a2enmod proxy
+a2enmod proxy_wstunnel
+service apache2 restart
+```
 
 ## Configuring
 
