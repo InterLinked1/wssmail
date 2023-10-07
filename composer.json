@@ -1,5 +1,8 @@
 {
     "require": {
-        "phpmailer/phpmailer": "^6.8"
+        "phpmailer/phpmailer": "^6.8",
+        "web-token/jwt-encryption": "^3.2",
+        "web-token/jwt-encryption-algorithm-aescbc": "^3.2",
+        "web-token/jwt-encryption-algorithm-aeskw": "^3.2"
     }
 }

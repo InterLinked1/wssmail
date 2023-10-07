@@ -12,6 +12,9 @@ a {
 	padding:0;
 	display: block;
 }
+#webmail-container {
+	height: 100%;
+}
 #main {
 	width: 100%;
 	height: calc(100% - 50px);
@@ -23,6 +26,9 @@ a {
 	background-color: #323232;
 	display: flex;
 	align-items: center;
+	/* Mainly needed for pre-login */
+	position: absolute;
+	bottom: 0;
 }
 #statusbar, #statusbar a {
 	color: white;

@@ -1,7 +1,9 @@
-var wsuri = (((window.location.protocol === "https:") ? "wss://" : "ws://") + window.location.host + "/webmail");
-
 /* Global variables */
-var ws = new WebSocket(wsuri);
+var attempted_auth = false;
+var authenticated = false;
+var capabilities = [];
+var authcapabilities = [];
+var ws = null;
 
 var checkedNotifyPerm = false;
 
@@ -39,6 +41,409 @@ var lastbody = null;
 var lastsent = null;
 var lastmsgid = null;
 var references = null;
+
+function resetConnection() {
+	attempted_auth = false;
+	authenticated = false;
+	capabilities = [];
+	authcapabilities = [];
+	ws = null;
+}
+
+function disconnect() {
+	if (ws !== null) {
+		ws.close();
+		resetConnection();
+	}
+}
+
+function authMethodCompatible(name) {
+	if (!authcapabilities.includes(name)) {
+		return false; /* If not offered by server, can't possibly use it */
+	}
+	/* If explicitly requested, or using autoselect, good to use */
+	var requested = document.getElementById('authmethod').value;
+	return requested === name || requested === "auto";
+}
+
+function plainLoginAllowed() {
+	var requested = document.getElementById('authmethod').value;
+	return requested === "PLAIN" || requested === "auto";
+}
+
+function isAutoLogin() {
+	var autologin = document.getElementById('autologin');
+	return autologin && autologin.value == 1;
+}
+
+function tryAutoLogin() {
+	var autologout = document.getElementById('autologout');
+	if (autologout && autologout.value == 1) {
+		console.log("Purging old login data");
+		/* This is a bit odd because logout is handled entirely by the client.
+		 * The server can invalidate client side sessions only by changing the key (so the JWE can no longer validate when decrypted).
+		 * Otherwise, since the expiration in the JWE is fixed, to log out early, the client needs to destroy its cookies (which we trust it will),
+		 * and we should also clear the local storage values since they are now useless anyways.
+		 * (Cookie values contain non-sensitive server connection info + the encrypted encryption key. Once we lose that, we lose the ability to decrypt the encrypted password. */
+		localStorage.removeItem("webmail-iv"); /* Clear IV used for password encryption/decryption */
+		localStorage.removeItem("webmail-password"); /* Clear encrypted password */
+	}
+	if (isAutoLogin() && localStorage.getItem("webmail-password") && localStorage.getItem("webmail-iv")) {
+		console.log("Autoconnecting using saved session info");
+		connect();
+	}
+}
+
+async function tryLogin() {
+	if (authcapabilities.includes("LOGINDISABLED")) {
+		setFatalError("Login is disabled on this IMAP server");
+		return;
+	}
+
+	/* Determine how to authenticate */
+	var requested = document.getElementById('authmethod').value;
+
+	/* Common IMAP authentication capabilities (hard to find a definitive list):
+	 *
+	 * Thunderbird-supported: AUTH=LOGIN, AUTH=PLAIN, AUTH=CRAM-MD5, AUTH=NTLM, AUTH=GSSAPI, AUTH=MSN, AUTH=EXTERNAL, AUTH=XOAUTH2
+	 * Others: AUTH=DIGEST-MD5, AUTH=OAUTHBEARER
+	 *
+	 * A somewhat subjective ranking of these capabilities from most secure (and thus most preferred) to least preferred:
+	 * Partially based on ordering used here:
+	 * - https://github.com/smiley22/S22.Imap/blob/874de537106804fed9cd752b9945c666af6221e2/ImapClient.cs#L305
+	 * - https://doc.dovecot.org/configuration_manual/authentication/authentication_mechanisms/
+	 *
+	 * There are several drawbacks to these schemes, discussed here: https://doc.dovecot.org/configuration_manual/authentication/password_schemes/
+	 *
+	 * The reason we attempt to support these is the webmail server may be operated by a somewhat trusted
+	 * but not entirely trusted intermediary. In particular, we don't want the intermediary to have access
+	 * to the plaintext password at any point. Thus, if the IMAP server supports one of these protocols,
+	 * it is likely preferrable to use a non-plaintext authentication mechanism to plaintext.
+	 * Methods that are largely pertinent to Windows and Active Directory only, e.g. NTLM, GSSAPI (RFC 4752), are omitted here.
+	 * XOAUTH2 and its successor, OAUTHBEARER, require being registered with each service, which
+	 * makes them less practical to use, since all this needs to be done client-side.
+	 *
+	 * - OAUTHBEARER (RFC 6750)
+	 * - SCRAM-SHA-256 (RFC 7677)
+	 * - SCRAM-SHA-1
+	 * - DIGEST-MD5
+	 * - CRAM-MD5
+	 * - PLAIN-CLIENTTOKEN (Gmail-specific, what is this exactly???)
+	 * - PLAIN
+	 *
+	 */
+
+	/* TODO: Add support for all the above. Currently, we just support PLAIN. */
+
+	if (requested === "none") {
+		/* Abort, we're connected to the server so can display capabilities */
+		setError("Supported IMAP auth methods: " + authcapabilities.join(", "));
+		return;
+	}
+
+	var pt;
+	if (document.getElementById('login-password').value !== "") {
+		pt = document.getElementById('login-password').value;
+		document.getElementById('login-password').value = ""; /* Clear the plaintext password from the page */
+	} else {
+		/* Using the encryption key returned by the server, decrypt the password, stored locally */
+		var key_base64_encoded = document.getElementById('clientkey');
+		if (!key_base64_encoded) {
+			console.error("Can't log in (no key available to decrypt password)");
+			return;
+		}
+		key_base64_encoded = key_base64_encoded.value;
+		var decoded_key = base64ToArrayBuffer(key_base64_encoded);
+		var encoded_pw = localStorage.getItem("webmail-password");
+		if (!encoded_pw) {
+			console.error("Can't log in (no encrypted password available to decrypt)");
+			return;
+		}
+		var decoded_pw = base64ToArrayBuffer(encoded_pw); /* Get back the ciphertext */
+
+		var encoded_iv = localStorage.getItem("webmail-iv");
+		var decoded_iv = base64ToArrayBuffer(encoded_iv); /* Get back the IV */
+
+		pt = await decryptPassword(decoded_pw, decoded_key, decoded_iv); /* Recover the plain text password */
+	}
+
+	if (plainLoginAllowed() && (authMethodCompatible("PLAIN") || authMethodCompatible("LOGIN"))) {
+		/* All IMAP servers should support AUTH=PLAIN, AUTH=LOGIN, or LOGIN as a last resort */
+		var payload = {
+			command: "LOGIN",
+			/* base64 encode the password purely for obfuscation
+			 * Using plaintext password auth is fundamentally not ideal when going through an intermediary web server,
+			 * this doesn't improve security at all but at least makes it harder for the server admin to accidentally see the password */
+			password: btoa(pt)
+		}
+		payload = JSON.stringify(payload);
+		attempted_auth = true;
+		ws.send(payload);
+	} else {
+		setError("No mutually supported IMAP authentication methods (server supports " + authcapabilities.join(", ") + ")");
+	}
+}
+
+function enc_encode(m) {
+	var encoder = new TextEncoder();
+	return encoder.encode(m);
+}
+
+function enc_decode(m, encoding) {
+	var decoder = new TextDecoder(encoding);
+	return decoder.decode(m);
+}
+
+async function decryptPassword(ciphertext, raw, iv) {
+	var key = await window.crypto.subtle.importKey("raw", raw, "AES-GCM", true, [ "encrypt", "decrypt" ],);
+	var decrypted = await window.crypto.subtle.decrypt(
+		{
+			name: "AES-GCM",
+			iv: iv
+		},
+		key,
+		ciphertext
+	);
+	return enc_decode(decrypted, "utf-8");
+}
+
+function arrayBufferToBase64(buffer) {
+    var binary = '';
+    var bytes = new Uint8Array(buffer);
+    var len = bytes.byteLength;
+    for (var i = 0; i < len; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    return window.btoa( binary );
+}
+
+function base64ToArrayBuffer(base64) {
+    var binaryString = atob(base64);
+    var bytes = new Uint8Array(binaryString.length);
+    for (var i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes.buffer;
+}
+
+async function newSession(e, tgt) {
+	if (!window.isSecureContext || window.crypto.subtle === undefined) {
+		/* By default, this only exists in secure contexts */
+		setError("Crypto unavailable in insecure contexts: use HTTPS or enable in your browser e.g. chrome://flags/#unsafely-treat-insecure-origin-as-secure");
+		return;
+	}
+
+	/* Create a cryptographically secure encryption key
+	 * We send this to the server to encrypt and return to us (encrypted by the server) in a JWT.
+	 * The server will also bounce the encryption key back in a header.
+	 * The point of this is neither the raw encryption key nor the plaintext password is stored on the client.
+	 * We need the server to recover these, but the server never has access to the plaintext password,
+	 * and it only has access to the plaintext password through this POST request + the JWT cookie,
+	 * and it doesn't store that at all. This makes offline attacks more difficult. */
+
+	/* We need to encrypt the password now, BEFORE the form POSTs, or we'll lose access to the password,
+	 * since we need to store it, in some form, beforehand. */
+	/* Generate an AES-GCM key */
+	var aeskey = await window.crypto.subtle.generateKey(
+		{
+			name: "AES-GCM",
+			length: 256,
+		},
+		true,
+		["encrypt", "decrypt"],
+	);
+
+	/* Encode and encrypt the plaintext password */
+	var encoded = enc_encode(document.getElementById('login-password').value);
+	var iv = window.crypto.getRandomValues(new Uint8Array(12)); /* This must never be reused with a given key */
+	var ciphertext = await window.crypto.subtle.encrypt(
+		{
+			name: "AES-GCM",
+			iv: iv,
+		},
+		aeskey,
+		encoded
+	);
+	/* The ciphertext is only ever stored locally. It never leaves the client.
+	 * The encryption key goes to the server for safekeeping. It'll encrypt it
+	 * and return a scrambled form of it in a JWT, for persistence,
+	 * as well as unscrambled in header responses, for immediate usage. */
+	var pw_b64_encoded = arrayBufferToBase64(ciphertext);
+	localStorage.setItem("webmail-password", pw_b64_encoded); /* Yes, this is encrypted */
+
+	var raw = await window.crypto.subtle.exportKey("raw", aeskey);
+	var key_base64_encoded = arrayBufferToBase64(raw);
+	document.getElementById('enckey').value = key_base64_encoded; /* Siphon off the key to the server, via the form POST */
+
+	var iv_encoded = arrayBufferToBase64(iv); /* Save the IV locally */
+	localStorage.setItem("webmail-iv", iv_encoded);
+
+	const enable_sanity_check = true;
+	if (enable_sanity_check) { /* As a sanity check, make sure we get back the original */
+		var decoded_key = base64ToArrayBuffer(key_base64_encoded);
+		var encoded_pw = localStorage.getItem("webmail-password");
+		console.assert(pw_b64_encoded === encoded_pw);
+		var decoded_pw = base64ToArrayBuffer(encoded_pw); /* Get back the ciphertext */
+		/* console.assert(decoded_pw === ciphertext); */ // Doesn't work since === is just like ptr comparison (but these should be equivalent by value, if compared)
+		var pt = await decryptPassword(decoded_pw, decoded_key, iv);
+		console.assert(pt === document.getElementById('login-password').value);
+		/* Sadly, JS doesn't really allow us to (securely) destroy variables */
+	}
+
+	document.getElementById('login-password').value = ""; /* Destroy the password */
+	tgt.submit();
+}
+
+async function authenticate(e) {
+	/* If we elected to remember connection info, we need to POST
+	 * to the server first (as usual) so we can get the cookie. */
+	if (document.getElementById('loginlimit').value > 0) {
+		var tgt = e.currentTarget; /* We need to use this after this event handler returns */
+		(async () => {
+			await newSession(e, tgt);
+		})();
+		/* Due to the await, we cannot let the form POST as normal,
+		 * since the await needs to complete before we can POST it.
+		 * So that's done inside initKey() */
+		e.preventDefault();
+	} else {
+		e.preventDefault();
+		/* If this is the first login attempt, open the connection */
+		if (ws === null) {
+			connect(); /* tryLogin() will get invoked eventually */
+		} else {
+			await tryLogin();
+		}
+	}
+}
+
+document.getElementById('login').addEventListener('submit', function(e) { authenticate(e); }, true);
+
+function connect() {
+	var wshost = document.getElementById('websocket-host') ? document.getElementById('websocket-host').value : window.location.host;
+	var wshttps = document.getElementById('websocket-https') ? document.getElementById('websocket-https').value == 1 : (window.location.protocol === "https:");
+	var wsport = document.getElementById('websocket-port') ? document.getElementById('websocket-port').value : null;
+	var wsbaseuri = document.getElementById('websocket-uri') ? document.getElementById('websocket-uri').value : "/webmail";
+	var wsuri = ((wshttps ? "wss://" : "ws://") + wshost + (wsport ? (":" + wsport) : "") + wsbaseuri);
+
+	/* We only include query parameters if it's a direct login w/o Remember Me.
+	 * However, the cookie might not go to the backend if the hostname is different, so to be safe,
+	 * the frontend backend (PHP) also injects all the cookie info into the page, and we set it here.
+	 * Since we don't adjust loginlimit for Remember Me autoconnects, we just require loginlimit === 0,
+	 * but isAutoLogin() will not necessarily hold.
+	 *
+	 * XXX Technically, this workaround is only required if the WebSocket hostname differs from our own,
+	 * if they're identical, then we can rely on the cookie to transmit this info and then
+	 * !isAutoLogin() && document.getElementById('loginlimit').value == 0
+	 * might be a better condition.
+	 */
+	if (document.getElementById('loginlimit').value == 0) {
+		/* If logging in directly, need to pass the connection info via the WebSocket URI since that's the only way to pass data prior to connection being established. */
+		var server = document.getElementById('server').value;
+		wsuri += "?server=" + server;
+		var port = document.getElementById('port').value;
+		wsuri += "&port=" + port;
+		var secure = document.getElementById('security-tls').checked;
+		wsuri += "&secure=" + secure;
+		/* This is needed for logging in without Remember Me: */
+		var username = document.getElementById('login-username').value;
+		if (username !== "") {
+			wsuri += "&username=" + username;
+		}
+	}
+
+	console.log("Establishing WebSocket connection to " + wsuri);
+	ws = new WebSocket(wsuri);
+	console.debug("Established WebSocket connection to " + wsuri);
+	ws.onopen = function(e) {
+		console.log("Websocket connection opened to " + wsuri);
+
+		/* Load parameters from URL */
+		var url = new URL(window.location.href);
+		const searchParams = new URLSearchParams(url.search);
+		var folder = searchParams.get("folder");
+		selectedFolder = folder !== undefined ? folder : "INBOX";
+		var q;
+		q = searchParams.get("page");
+		if (q !== undefined && q !== null) {
+			pageNumber = q;
+		}
+		q = searchParams.get("pagesize");
+		if (q !== undefined && q !== null) {
+			pagesize = q;
+		}
+		document.getElementById('option-pagesize').selectedIndex = Math.ceil(pagesize / 5) - 1;
+
+		q = searchParams.get("sort");
+		if (q !== undefined && q !== null) {
+			var sortDropdown = document.getElementById('option-sort');
+			for (var i = 0; i < sortDropdown.options.length; i++) {
+				if (sortDropdown.options[i].value === q) {
+					sortDropdown.selectedIndex = i;
+					sortOrder = i > 0 ? q : null; /* First one is none (default) */
+					break;
+				}
+			}
+		}
+
+		q = searchParams.get("filter");
+		if (q !== undefined && q !== null) {
+			var searchDropdown = document.getElementById('option-filter');
+			for (var i = 0; i < searchDropdown.options.length; i++) {
+				if (searchDropdown.options[i].value === q) {
+					searchDropdown.selectedIndex = i;
+					simpleFilter = i > 0 ? q : null; /* First one is none (default) */
+					break;
+				}
+			}
+		}
+
+		q = searchParams.get("html");
+		if (q !== undefined && q !== null) {
+			viewHTML = q === "yes";
+		}
+		document.getElementById("option-html").checked = viewHTML;
+
+		q = searchParams.get("extreq");
+		if (q !== undefined && q !== null) {
+			allowExternalRequests = q === "yes";
+		}
+		document.getElementById("option-extreq").checked = allowExternalRequests;
+
+		q = searchParams.get("raw");
+		if (q !== undefined && q !== null) {
+			viewRaw = q === "yes";
+		}
+		document.getElementById("option-raw").checked = viewRaw;
+
+		q = searchParams.get("preview");
+		if (q !== undefined && q !== null) {
+			viewPreview = q === "yes";
+		}
+		document.getElementById("option-preview").checked = viewPreview;
+
+		console.log("Folder: " + selectedFolder + ", page: " + pageNumber + ", page size: " + pagesize);
+
+		processSettings();
+	};
+	ws.onmessage = function(e) {
+		handleMessage(e);
+	}
+	ws.onclose = function(e) {
+		console.log("Websocket closed");
+		if (authenticated) {
+			setFatalError("The server closed the connection. Please reload the page.");
+		} else {
+			setFatalError("The server closed the connection. Please click 'Log in' to reconnect.");
+		}
+		resetConnection();
+	};
+	ws.onerror = function(e) {
+		console.log("Websocket error");
+		setError("A websocket error occured.");
+	};
+	console.debug("Set up WebSocket callbacks");
+}
 
 function reloadCurrentMessage() {
 	if (currentUID > 0) {
@@ -113,90 +518,6 @@ function setPageSize(pgsz) {
 	var currentPage = getq('page');
 	commandFetchList(currentPage);
 }
-
-ws.onopen = function(e) {
-	console.log("Websocket connection opened to " + wsuri);
-
-	/* Load parameters from URL */
-	var url = new URL(window.location.href);
-	const searchParams = new URLSearchParams(url.search);
-	var folder = searchParams.get("folder");
-	selectedFolder = folder !== undefined ? folder : "INBOX";
-	var q;
-	q = searchParams.get("page");
-	if (q !== undefined && q !== null) {
-		pageNumber = q;
-	}
-	q = searchParams.get("pagesize");
-	if (q !== undefined && q !== null) {
-		pagesize = q;
-	}
-	document.getElementById('option-pagesize').selectedIndex = Math.ceil(pagesize / 5) - 1;
-
-	q = searchParams.get("sort");
-	if (q !== undefined && q !== null) {
-		var sortDropdown = document.getElementById('option-sort');
-		for (var i = 0; i < sortDropdown.options.length; i++) {
-			if (sortDropdown.options[i].value === q) {
-				sortDropdown.selectedIndex = i;
-				sortOrder = i > 0 ? q : null; /* First one is none (default) */
-				break;
-			}
-		}
-	}
-
-	q = searchParams.get("filter");
-	if (q !== undefined && q !== null) {
-		var searchDropdown = document.getElementById('option-filter');
-		for (var i = 0; i < searchDropdown.options.length; i++) {
-			if (searchDropdown.options[i].value === q) {
-				searchDropdown.selectedIndex = i;
-				simpleFilter = i > 0 ? q : null; /* First one is none (default) */
-				break;
-			}
-		}
-	}
-
-	q = searchParams.get("html");
-	if (q !== undefined && q !== null) {
-		viewHTML = q === "yes";
-	}
-	document.getElementById("option-html").checked = viewHTML;
-
-	q = searchParams.get("extreq");
-	if (q !== undefined && q !== null) {
-		allowExternalRequests = q === "yes";
-	}
-	document.getElementById("option-extreq").checked = allowExternalRequests;
-
-	q = searchParams.get("raw");
-	if (q !== undefined && q !== null) {
-		viewRaw = q === "yes";
-	}
-	document.getElementById("option-raw").checked = viewRaw;
-
-	q = searchParams.get("preview");
-	if (q !== undefined && q !== null) {
-		viewPreview = q === "yes";
-	}
-	document.getElementById("option-preview").checked = viewPreview;
-
-	console.log("Folder: " + selectedFolder + ", page: " + pageNumber + ", page size: " + pagesize);
-
-	processSettings();
-};
-ws.onclose = function(e) {
-	console.log("Websocket closed");
-	if (gotlist) {
-		setFatalError("The server closed the connection. Please reload the page.");
-	} else {
-		setFatalError("The server closed the connection - wrong username or password? Logout and try again.");
-	}
-};
-ws.onerror = function(e) {
-	console.log("Websocket error");
-	setError("A websocket error occured.");
-};
 
 function processSettings() {
 	/* Settings in local storage, rather than in query params */
@@ -967,17 +1288,30 @@ function clearError() {
 }
 
 function setErrorFull(msg, fatal) {
+	const now = Date.now();
+
+	if (false) {
+		/* If we just set the status bar to display a message, don't overwrite it immediately */
+		const delay = now - errorMsgSetTime_Actual;
+		if (delay < 1500) {
+			delay = 1500 - delay;
+			console.log("Delaying status notification for " + delay + " ms");
+			setTimeout((msg, fatal) => setErrorFull(msg, fatal), delay);
+			return;
+		}
+	}
+
 	/* XXX There isn't a good way of errors to be cleared currently.
-	 * User cannot dismissed, and successful actions do not clear errors.
+	 * User cannot dismiss, and successful actions do not clear errors.
 	 * As a workaround, just clear it automatically after a set amount of time,
-	 * unless it's a fatal error.
-	 */
+	 * unless it's a fatal error. */
 	document.getElementById('errorbar').textContent = msg;
+	errorMsgSetTime_Actual = now;
 	if (!fatal) {
-		errorMsgSetTime = Date.now(); /* epoch in ms */
+		errorMsgSetTime = now; /* epoch in ms */
 		setTimeout(() => clearError(), 7000); /* Clear error after 7 seconds, unless a new one has come up */
 	} else {
-		errorMsgSetTime = Date.now() + 999999; /* Make sure the error doesn't disappear */
+		errorMsgSetTime = now + 999999; /* Make sure the error doesn't disappear */
 	}
 }
 
@@ -1483,7 +1817,7 @@ function addColumnHeading(tr, name) {
 	tr.appendChild(th);
 }
 
-ws.onmessage = function(e) {
+function handleMessage(e) {
 	var jsonData = JSON.parse(e.data);
 	console.log(jsonData);
 	if (jsonData.response != undefined) {
@@ -1500,6 +1834,19 @@ ws.onmessage = function(e) {
 					setStatus(jsonData.msg);
 				}
 			}
+		} else if (response === "CAPABILITY") {
+			capabilities = jsonData.capabilities;
+			authcapabilities = jsonData.authcapabilities;
+			/* We can't check authenticated, since CAPABILITY response to login
+			 * is received before the LIST response to it.
+			 * To prevent sending a duplicate LOGIN, don't do it more than once. */
+			if (!attempted_auth) {
+				tryLogin();
+			}
+		} else if (response === "AUTHENTICATED") {
+			authenticated = true; /* If we're getting a LIST response, we must have successfully authenticated */
+			document.getElementById('login-container').classList.add('default-hidden');
+			document.getElementById('webmail-container').classList.remove('default-hidden');
 		} else if (response === "LIST") {
 			gotlist = true;
 			var moveto = "<option value=''></option>"; /* Start it off with an empty option */
@@ -2024,3 +2371,6 @@ document.getElementById('option-preview').addEventListener('change', function() 
 document.getElementById('option-html').addEventListener('change', function() { toggleHTML(this); }, {passive: true});
 document.getElementById('option-extreq').addEventListener('change', function() { toggleExternalRequests(this); }, {passive: true});
 document.getElementById('option-raw').addEventListener('change', function() { toggleRaw(this); }, {passive: true});
+
+/* If we can log in automatically, do so */
+tryAutoLogin();

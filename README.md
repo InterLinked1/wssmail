@@ -54,21 +54,28 @@ Both are required to make wssmail work. In theory, the components could each hav
 
 No configuration is required of the backend (apart from the WebSocket server port in `net_ws.conf`); as long as you have LBBS running with the appropriate modules loaded, the backend should be good to go. Refer to the [LBBS](https://github.com/InterLinked1/lbbs) repository for more details on that.
 
-The frontend requires the PHP `imap` and `openssl` extensions for SMTP. Please make sure they are enabled.
+The frontend requires the PHP `imap` and `openssl` extensions for SMTP. Please make sure they are enabled. The JWT/JWE functionality requires PHP's mbstring extension. You can ensure the PHP and Apache-related (if you are using Apache to reverse proxy) dependencies are satisfied by running the following:
 
-To install the frontend, you will need Composer (for PHPMailer). You can navigate to the directory that will serve the webmail application, then run:
+```
+apt-get install php-imap php-mbstring
+a2enmod rewrite
+a2enmod proxy
+a2enmod proxy_wstunnel
+service apache2 restart
+```
+
+To install the frontend, you will need Composer. Once you have cloned this repository into the web directory where it will be hosted, run:
 ```
 wget https://raw.githubusercontent.com/composer/getcomposer.org/main/web/installer -O - -q | php -- --quiet
-php composer.phar require phpmailer/phpmailer
+php composer.phar install
 ```
-
-Alternately, you can run `php composer.phar install` instead of naming PHPMailer explicitly.
-
-Then, clone or copy the contents of this repository into the above directory.
 
 Alternately, if you already have PHPMailer via Composer on your system, you can specify the path to the autoload file in `config.php`.
 
-Basic configuration of your frontend web server is required for the frontend site. Apart from serving the frontend files, WebSocket connections to your frontend host will also need to be reverse proxied to the LBBS WebSocket server. This could be done as follows, for an Apache HTTP virtualhost:
+Basic configuration of your frontend web server is required for the frontend site. There are two ways you can host this application:
+
+* Run the frontend and backend on separate servers. You'll need to specify the WebSocket server info in `config.php`.
+* Run the frontend and backend on the same server, and reverse proxy WebSocket connections to the backend. This could be done as follows, for an Apache HTTP virtualhost:
 
 ```
 RewriteEngine On
@@ -77,20 +84,13 @@ RewriteRule /(.*)           ws://localhost:8143/webmail [P,L]
 ```
 
 (This assumes that 8143 is your WebSocket port, as configured in LBBS's `net_ws.conf`). Note that this connection is not encrypted, but this is a loopback connection so that does not matter.
-
-The `php-imap` extension is also required, for SMTP functionality. You can ensure the Apache-related dependencies are satisfied by running the following:
-
-```
-apt-get install php-imap
-a2enmod rewrite
-a2enmod proxy
-a2enmod proxy_wstunnel
-service apache2 restart
-```
+If you are running the components on different servers, be sure to use TLS for everything.
 
 ## Configuring
 
-Configuration of the webmail frontend itself is not required. The client is meant to be readily usable as a generic web-based IMAP and SMTP client right out of the box: it really is plug'n play. However, there are a few things that can be configured, if desired. These are documented in `config.sample.php`. To apply settings, create a `config.php` and put them there.
+The client is meant to be readily usable as a generic web-based IMAP and SMTP client right out of the box: it really is plug'n play. However, there are a few things that can be configured, if desired. These are documented in `config.sample.php`. To apply settings, create a `config.php` and put them there.
+
+One thing you will want to consider is the server key, used for encrypting JWTs (JWEs). This is set at the top of `config.php`. Be sure to change the default key to something private to the frontend server!
 
 By default, wssmail may be used with any mail server on demand. If you would like to restrict the webmail client to a particular mail server, for instance (which is typical with many deployed webmail sites, which are coupled to a specific mail server), you can force the server settings:
 
