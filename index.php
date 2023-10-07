@@ -144,7 +144,14 @@ function startHTML() {
 	<link rel="stylesheet" type="text/css" href="main.css">
 	<link rel="stylesheet" type="text/css" href="form.css">
 	<link rel="stylesheet" type="text/css" href="message.css">
-	<link rel="icon" href="data:,"> <!-- Inhibit Chrome's automatic favicon download -->
+	<?php
+	if (file_exists("favicon.ico")) {
+		echo "<link rel='shortcut icon' href='favicon.ico'>";
+	} else {
+		?><link rel="icon" href="data:,"> <!-- Inhibit Chrome's automatic favicon download -->
+		<?php
+	}
+	?>
 </head>
 <body>
 	<?php
@@ -634,7 +641,7 @@ startHTML();
 				/* Use name instead of id, since name can contain spaces */
 				echo "<div name='preset-" . $preset['name'] . "'>";
 				echo "<input type='hidden' name='server' value='" . $preset['imap']['server'] . "'/>";
-				echo "<input type='hidden' name='security' value='" . ($preset['imap']['security'] ? 1 : 0) . "'/>";
+				echo "<input type='hidden' name='security' value='" . ($preset['imap']['security'] === 'tls' ? 1 : 0) . "'/>";
 				echo "<input type='hidden' name='port' value='" . $preset['imap']['port'] . "'/>";
 				echo "<input type='hidden' name='smtpserver' value='" . $preset['smtp']['server'] . "'/>";
 				echo "<input type='hidden' name='smtpsecurity' value='" . $preset['smtp']['security'] . "'/>";

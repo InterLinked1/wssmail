@@ -37,7 +37,7 @@ function setPreset(provider) {
 		return;
 	}
 	var server = presetdiv.querySelector("input[name='server']").value;
-	var security = presetdiv.querySelector("input[name='security']").value;
+	var security = presetdiv.querySelector("input[name='security']").value == 1;
 	var port = presetdiv.querySelector("input[name='port']").value;
 	var smtpserver = presetdiv.querySelector("input[name='smtpserver").value;
 	var smtpsecurity = presetdiv.querySelector("input[name='smtpsecurity").value;

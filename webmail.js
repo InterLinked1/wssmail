@@ -16,7 +16,6 @@ var viewPreview = true;
 var selectedFolder = null;
 var pageNumber = 1;
 /* Set default page size based on screen size */
-console.log("Screen height: " + window.screen.height);
 var sortOrder = null;
 var simpleFilter = null;
 var pagesize = window.screen.height > 800 ? 25 : window.screen.height > 600 ? 15 : 10;
