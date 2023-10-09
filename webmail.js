@@ -88,6 +88,7 @@ function tryAutoLogin() {
 		localStorage.removeItem("webmail-password"); /* Clear encrypted password */
 	}
 	if (isAutoLogin() && localStorage.getItem("webmail-password") && localStorage.getItem("webmail-iv")) {
+		setStatus("Attempting to login to IMAP server using saved info&#133;");
 		console.log("Autoconnecting using saved session info");
 		connect();
 	}
@@ -2087,7 +2088,7 @@ function handleMessage(e) {
 					/* Content-Security-Policy */
 					var csp = frame.contentWindow.document.createElement('meta');
 					csp.setAttribute('http-equiv', 'Content-Security-Policy');
-					csp.setAttribute('content', "default-src 'self'; font-src 'self' 'unsafe-inline';");
+					csp.setAttribute('content', "default-src 'self'; font-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'");
 					/* Even if there's no head tag in the HTML, the browser will autocreate one */
 					frame.contentWindow.document.head.insertBefore(csp, frame.contentWindow.document.head.firstChild);
 					/* Even if an adversarial CSP meta tag is included in the message, CSPs are additive,
