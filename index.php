@@ -480,7 +480,7 @@ startHTML();
 				if (!isset($settings['login']['imap']['server'])) {
 				?>
 					<div>
-						<label for="server">IMAP Server</label><input type="text" id="server" name="server" value="<?php echo isset($webMailCookie['server']) ? $webMailCookie['server'] : '';?>"/>
+						<label for="server">IMAP Server</label><input type="text" id="server" name="server" value="<?php echo isset($webMailCookie['server']) ? $webMailCookie['server'] : 'localhost';?>"/>
 					</div>
 				<?php
 				}
@@ -489,9 +489,9 @@ startHTML();
 					<div>
 						<label>IMAP Security</label>
 						<div>
-							<input type="radio" id="security-plain" name="security" value="none"<?php echo !isset($webMailCookie['security']) || !$webMailCookie['security'] ? ' checked' : '';?>/>
+							<input type="radio" id="security-plain" name="security" value="none"<?php echo !isset($webMailCookie['security']) || $webMailCookie['security'] === 'none' ? ' checked' : '';?>/>
 							<label for="security-plain">None</label>
-							<input type="radio" id="security-tls" name="security" value="tls"<?php echo isset($webMailCookie['security']) && $webMailCookie['security'] ? ' checked' : '';?>/>
+							<input type="radio" id="security-tls" name="security" value="tls"<?php echo isset($webMailCookie['security']) && $webMailCookie['security'] === 'tls' ? ' checked' : '';?>/>
 							<label for="security-tls">TLS</label>
 						</div>
 					</div>
@@ -500,14 +500,14 @@ startHTML();
 				if (!isset($settings['login']['imap']['port'])) {
 				?>
 					<div>
-						<label for="port">IMAP Port</label><input type="number" id="port" name="port" value="<?php echo isset($webMailCookie['port']) ? $webMailCookie['port'] : '';?>"/>
+						<label for="port">IMAP Port</label><input type="number" id="port" name="port" value="<?php echo isset($webMailCookie['port']) ? $webMailCookie['port'] : '143';?>"/>
 					</div>
 				<?php
 				}
 				if (!isset($settings['login']['smtp']['server'])) {
 				?>
 					<div>
-						<label for="smtpserver">SMTP Server</label><input type="text" id="smtpserver" name="smtpserver" value="<?php echo isset($webMailCookie['smtpserver']) ? $webMailCookie['smtpserver'] : '';?>"/>
+						<label for="smtpserver">SMTP Server</label><input type="text" id="smtpserver" name="smtpserver" value="<?php echo isset($webMailCookie['smtpserver']) ? $webMailCookie['smtpserver'] : 'localhost';?>"/>
 					</div>
 				<?php
 				}
@@ -529,7 +529,7 @@ startHTML();
 				if (!isset($settings['login']['smtp']['port'])) {
 				?>
 					<div>
-						<label for="port">SMTP Port</label><input type="number" id="smtpport" name="smtpport" value="<?php echo isset($webMailCookie['smtpport']) ? $webMailCookie['smtpport'] : '';?>"/>
+						<label for="port">SMTP Port</label><input type="number" id="smtpport" name="smtpport" value="<?php echo isset($webMailCookie['smtpport']) ? $webMailCookie['smtpport'] : '587';?>"/>
 					</div>
 				<?php
 				}
