@@ -698,6 +698,13 @@ function commandFetchMessage(uid) {
 	}
 	payload = JSON.stringify(payload);
 	ws.send(payload);
+	if (viewRaw) {
+		/* If we're downloading the entire message, and it's more than a couple KB,
+		 * it could possibly take quite a while, particularly if the client is on
+		 * a slow connection (e.g. dial up).
+		 * Meanwhile, display a status message to let the user know we're processing the request. */
+		setStatus("Downloading raw message, please wait...");
+	}
 }
 
 function append(data, len) {
@@ -1449,8 +1456,10 @@ function displayFormatFlowed(body, flowed) {
 function formatDate(epoch, timestamp) {
 	var epochms = timestamp * 1000;
 	var newdate = new Date(epochms); /* Accepts ms since epoch */
-	/* If time is within past 24 hours, don't display date, just the time */
-	if (epoch && epoch > timestamp && epochms + 86400000 > epoch) { /* Within past 24 hours */
+	var today = new Date();
+	/* If the timestamp is today, don't display date, just the time.
+	 * This is what Thunderbird-based clients, etc. do. */
+	if (newdate.toDateString() === today.toDateString()) { /* It's today */
 		newdate = newdate.toLocaleTimeString();
 	} else {
 		newdate = newdate.toLocaleString();
@@ -1952,6 +1961,9 @@ function handleMessage(e) {
 			pageNumber = 1; /* Reset to 1 whenever we successfully move to a new folder */
 			responseSelectFolder(jsonData);
 		} else if (response === "FETCH") {
+			if (viewRaw) {
+				clearStatus(); /* Get rid of "Downloading, please wait..." status message */
+			}
 			if (doingExport) {
 				doingExport = false;
 				/* Download the message */
