@@ -856,16 +856,20 @@ function forward() {
 	editor("Forward", '', '', '', 'Fwd: ' + lastsubject, fwdbody, lastmsgid, lastreferences);
 }
 
+function updateFolderCount(f) {
+	setFolderTitle(f.unseen); /* Update page title with new unread count */
+	drawFolderMenu(); /* Redraw folder list */
+}
+
 function adjustFolderCount(name, difftotal, diffunread) {
 	console.log("Applying folder adjustment: " + name + " (" + difftotal + "/" + diffunread + ")");
 	var f = getFolder(selectedFolder);
 	if (f === null) {
-		console.error("Couldn't find current folder (" + selectedFolder.name + ")in folder list?");
+		console.error("Couldn't find current folder (" + selectedFolder.name + ") in folder list?");
 	} else {
 		f.messages += difftotal;
 		f.unseen += diffunread;
-		setFolderTitle(f.unseen); /* Update page title with new unread count */
-		drawFolderMenu(); /* Redraw folder list */
+		updateFolderCount(f);
 	}
 }
 
@@ -2110,6 +2114,10 @@ function handleMessage(e) {
 			/* Display the message as seen in the message list */
 			implicitSeenUnseen(getSelectedUIDs(), true);
 		} else if (response === "EXISTS") {
+			/* FETCHLIST due to EXISTS will not update folder counts,
+			 * since we can do it ourselves.
+			 * If an EXPUNGE occurs, then the server will tell us the new counts. */
+			adjustFolderCount(selectedFolder, 1, 1);
 			notifyNewMessage(jsonData);
 		} else if (response === "FETCHLIST") {
 			lastCheckedSeqno = null;
@@ -2286,7 +2294,7 @@ function handleMessage(e) {
 				var f = getFolder(selectedFolder);
 				var f2 = getFolder(lastMoveTarget);
 				/* If the cause was "MOVE", that means we selected some messages and moved them elsewhere.
-				 * In this case, we keep traack of how many messages were selected, and if we subtract
+				 * In this case, we keep track of how many messages were selected, and if we subtract
 				 * that here, then that'll probably update this count correctly.
 				 * Furthermore, if this is a MOVE, we can add the messages to the move target. */
 				f.messages -= totalSelected;
@@ -2294,7 +2302,16 @@ function handleMessage(e) {
 				f.unseen -= unseenSelected;
 				f2.unseen += unseenSelected;
 				totalSelected = unseenSelected = 0;
-				drawFolderMenu();
+				updateFolderCount(f);
+			} else if (jsonData.unseen !== undefined) {
+				/* For certain operations, e.g. EXPUNGE,
+				 * the server will tell us how many total/unseen messages remain,
+				 * since we have no way of knowing
+				 * (and neither did the server, it had to ask for it) */
+				var f = getFolder(selectedFolder);
+				f.messages = jsonData.messages;
+				f.unseen = jsonData.unseen;
+				updateFolderCount(f);
 			}
 
 			/* Construct the page list navigation, based on page size and current page */
