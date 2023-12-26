@@ -3,7 +3,7 @@
  * -- wssmail webmail frontend --
  *
  * Copyright (C) 2023, Naveen Albert
- * 
+ *
  * This program is free software, distributed under the terms of
  * the GNU General Public License Version 2. See the LICENSE file
  * at the top of the source tree.
@@ -90,10 +90,6 @@ use Jose\Component\Encryption\Serializer\JWESerializerManager;
 use Jose\Component\Encryption\Serializer\CompactSerializer;
 use Jose\Component\Encryption\JWEDecrypter;
 use Jose\Component\Encryption\JWELoader;
-
-/* SMTP */
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
 
 $cookieName = 'wssmail_webmail';
 $keyCookieName = 'wssmail_clientkey';
@@ -391,18 +387,66 @@ $sendMessage = isset($_POST['from'], $_POST['to'], $_POST['replyto'], $_POST['cc
 
 require_once('smtp.php');
 if (isset($webMailCookie['smtpserver']) && $sendMessage) {
-	/* Send a message via SMTP, and upload it via IMAP APPEND. Quite another ballgame. */
-	if (isset($_POST['send'])) {
-		$ret = send_message($webMailCookie, true);
-	} else if (isset($_POST['savedraft'])) {
-		$ret = send_message($webMailCookie, false);
+	/* Because of the new client-side password storage scheme,
+	 * the password is no longer available to us directly from session storage.
+	 *
+	 * As a temporary workaround, rely on using Basic Authentication
+	 * for SMTP, which ensures the password is not stored server-side,
+	 * while temporarily allowing us to use it directly.
+	 *
+	 * One downside here is that WE do not know if the provided password
+	 * is correct, since as soon as we get a password, we provide it to the SMTP server.
+	 * If it's wrong, the request will fail, but the client is stuck with
+	 * the cached password, thinking it's correct.
+	 * To prevent the client from having to manually clear HTTP credentials
+	 * and start over, we use a cookie to keep track if the user has ever
+	 * successfully sent a message. This way, if SMTP fails for whatever reason,
+	 * and no messages have been sent successfully, we can change the realm to
+	 * show the page again, but the next request, the user will be prompted
+	 * again for Basic Authentication.
+	 */
+	session_start();
+	if (!isset($_SESSION['bauth'])) {
+		/* Initialize */
+		$_SESSION['bauth']['smtpsuccess'] = false; /* No message has been sent successfully yet. */
+		$_SESSION['bauth']['realm'] = "wssmail SMTP";
+		$_SESSION['bauth']['reprompt'] = 0;
+	}
+	if (!isset($_SERVER['PHP_AUTH_PW']) || $_SESSION['bauth']['reprompt'] == 2) {
+		$_SESSION['bauth']['reprompt'] = 0; /* Reset */
+		header("WWW-Authenticate: Basic realm=\"" . $_SESSION['bauth']['realm'] . "\"");
+		header("HTTP/1.1 401 Unauthorized");
+		$ret = "Failed to send message: No password is available for SMTP authentication.";
 	} else {
-		$ret = "Unsupported operation?";
+		/* Send a message via SMTP, and upload it via IMAP APPEND. Quite another ballgame. */
+		if (isset($_POST['send'])) {
+			$ret = send_message($webMailCookie, true);
+		} else if (isset($_POST['savedraft'])) {
+			$ret = send_message($webMailCookie, false);
+		} else {
+			$ret = "Unsupported operation?";
+		}
 	}
 	if ($ret !== null) {
+		if (!$_SESSION['bauth']['smtpsuccess']) {
+			/* We haven't successfully sent any messages yet during this session.
+			 * Assume the error was bad password (even if it wasn't),
+			 * so that we can prompt for basic auth again on the next request,
+			 * even if it wasn't. We do this by changing the realm.
+			 * We don't want to keep prompting for authentication repeatedly,
+			 * which is why we count to 2 before reprompting; this ensures
+			 * the first attempt goes through no matter what and another
+			 * attempt will cause a reauth.
+			 */
+			$_SESSION['bauth']['reprompt'] += 1;
+			$_SESSION['bauth']['realm'] = "wssmail SMTP " . rand(1, 8192);
+		}
 		/* Failure. Display the form again. */
 		/* XXX Mostly duplicated from editor() JS function */
 		$ret .= "<br>Note that if you added any attachments, you will need to re-add them.";
+		if ($_SESSION['bauth']['reprompt'] == 1) {
+			$ret .= "<br>If you were just prompted for authentication, you may have entered the wrong password; try sending again to be prompted to reauthenticate. If you see this error repeatedly and you did not elect to use STARTTLS or TLS, it is likely your SMTP server requires encryption to authenticate.";
+		}
 		?>
 		<html><head><title>Compose</title><link rel='stylesheet' type='text/css' href='style.css'><link rel='stylesheet' type='text/css' href='form.css'></head><body>
 		<p class='error'><?php echo $ret; ?></p>
@@ -438,6 +482,7 @@ if (isset($webMailCookie['smtpserver']) && $sendMessage) {
 		</html>
 		<?php
 	} else {
+		$_SESSION['bauth']['smtpsuccess'] = true;
 		?>
 		<html><head><title><?php echo $_POST['send'] ? "Sent" : "Saved"; ?></title></head>
 		<body><p><b>Message <?php echo $_POST['send'] ? "sent" : "saved to Drafts"; ?> successfully!</b> You may now close this tab.</p>

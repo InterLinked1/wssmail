@@ -1,4 +1,9 @@
 <?php
+/* SMTP */
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\SMTP;
+use PHPMailer\PHPMailer\Exception;
+
 function addAddresses($mail, $header, $s) {
 	$addresses = explode(',', $s); /* XXX ideally, delimit on either , or ; - but the RFC says , is the right one */
 	foreach ($addresses as $address) {
@@ -46,6 +51,9 @@ function addAddresses($mail, $header, $s) {
 }
 
 function send_message(array $webMailCookie, bool $send) {
+	global $settings;
+	$smtpDebug = false; /* Enable for SMTP debugging */
+	$connInfo = "Connecting to ";
 	$progname = "wssmail";
 	$progver = "0.1.0";
 	/* The only actual mandatory field here is "To". */
@@ -64,6 +72,10 @@ function send_message(array $webMailCookie, bool $send) {
 	$attachments = $_FILES['attachments'];
 	$priority = (int) $_POST['priority'];
 
+	/* Only the password from basic authentication is used.
+	 * The username is ignored; we use the username from the cookie. */
+	$password = $_SERVER['PHP_AUTH_PW'];
+
 	/* We don't need to do any validation here. That's the SMTP server's responsibility.
 	 * e.g. validation of the From address, etc.
 	 * If something is wrong with the message, it will get rejected and we can just return that error. */
@@ -78,7 +90,7 @@ function send_message(array $webMailCookie, bool $send) {
 		$msg .= "Subject: $subject\r\n";
 	}
 	if (strlen($from) < 1) {
-		$from = $webMailCookie['username']; /* Default to the username (which is probably a user@domain */
+		$from = $webMailCookie['username']; /* Default to the username (which is probably a user@domain) */
 	}
 	$msg .= "From: $from\r\n";
 	if (strlen($replyto) > 0) {
@@ -120,27 +132,43 @@ function send_message(array $webMailCookie, bool $send) {
 	try {
 		$mail = new PHPMailer();
 		$mail->Host = $webMailCookie['smtpserver'];
+		$connInfo .= $mail->Host;
 		$mail->isSMTP();
 		/* By default, these are 5 minutes, which is way too long. Do 15 seconds instead. */
 		$mail->getSMTPInstance()->Timeout = 15;
 		$mail->getSMTPInstance()->Timelimit = 15;
-		if (false) { /* Enable for SMTP debugging */
+		if ($smtpDebug) {
 			$mail->Debugoutput = 'html';
 			$mail->SMTPDebug = 3;
 		}
 		$mail->SMTPAuth = true;
 		/* Assume SMTP credentials are the same as the IMAP ones. */
-		$mail->Username = $webMailCookie['smtpserver'];
-		$mail->Password = $_SESSION['webmail']['password'];
-		if ($webMailCookie['smtpsecure'] === "starttls") {
+		$mail->Username = $webMailCookie['username'];
+		$mail->Password = $password;
+		$mail->Port = $webMailCookie['smtpport'];
+		$connInfo .= " port " . $mail->Port;
+		if ($webMailCookie['smtpsecurity'] === "starttls") {
 			$mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-		} else if ($webMailCookie['smtpsecure'] === "tls") {
+			$connInfo .= " (STARTTLS)";
+		} else if ($webMailCookie['smtpsecurity'] === "tls") {
 			$mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+			$connInfo .= " (TLS)";
 		} else {
 			$mail->SMTPAutoTLS = false; /* If the user did not select encryption, do not attempt it, even if server advertises. */
 			$mail->SMTPSecure = "";
+			$connInfo .= " (unencrypted)";
 		}
-		$mail->Port = $webMailCookie['smtpport'];
+
+		/* It's okay if the cert doesn't validate if we're connecting to an exempt server. */
+		if (isset($settings['tls']['noverify']) && in_array($mail->Host, $settings['tls']['noverify'])) {
+			$mail->SMTPOptions = array(
+				'ssl' => array(
+					'verify_peer' => false,
+					'verify_peer_name' => false,
+					'allow_self_signed' => true
+				)
+			);
+		}
 
 		/* Headers */
 		$mail = addAddresses($mail, "From", $from);
@@ -207,7 +235,7 @@ function send_message(array $webMailCookie, bool $send) {
 
 		if ($send) {
 			if (!$mail->send()) {
-				return $mail->ErrorInfo;
+				return $connInfo . "<br>" . $mail->ErrorInfo;
 			}
 		} else {
 			$mail->preSend();
@@ -222,18 +250,27 @@ function send_message(array $webMailCookie, bool $send) {
 			 * existing IMAP connection to do the append, but in the cases of
 			 * resubmits, we're basically in our own window, and it's cleaner to
 			 * handle it here without involving the parent. */
-			$path = "{" . $webMailCookie['server'] . ":" . $webMailCookie['port'] . "/imap" . ($webMailCookie['secure'] ? "/ssl" : "/notls") . "}" . ($send ? "Sent" : "Drafts");
-			$imap = imap_open($path, $webMailCookie['username'], $_SESSION['webmail']['password']);
+			$path = "{" . $webMailCookie['server'] . ":" . $webMailCookie['port'] . "/imap" . ($webMailCookie['security'] === 'tls' ? "/ssl" : "/notls") . "}" . ($send ? "Sent" : "Drafts");
+			$imap = imap_open($path, $webMailCookie['username'], $password);
+			if ($imap === false) {
+				return "Message sent, but failed to save copy of message to $path: " . imap_last_error();
+			}
 			$result = imap_append($imap, $path, $sentMessage, "\\Seen", date('d-M-Y H:i:s O'));
+			if ($webMailCookie['security'] !== 'tls') {
+				/* By default, PHP will log this notice to the error log for unencrypted IMAP servers offering AUTH=PLAIN:
+				 * PHP Notice:  PHP Request Shutdown: SECURITY PROBLEM: insecure server advertised AUTH=PLAIN (errflg=1)
+				 * This can be ignored, so suppress from the logs by calling the error functions to flush the error before closing. */
+				imap_errors();
+				imap_alerts();
+			}
 			imap_close($imap);
 			if (!$result) {
-				$e->getTraceAsString();
-				return "Failed to save message to $path: " . imap_last_error();
+				return "Message sent, but failed to save copy of message to $path: " . imap_last_error();
 			}
 			/* Close IMAP connection and return success */
 		}
 	} catch (Exception $e) {
-		return $mail->ErrorInfo;
+		return $connInfo . "<br>" . $mail->ErrorInfo;
 	}
 	return null;
 }
