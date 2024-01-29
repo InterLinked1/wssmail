@@ -1324,6 +1324,23 @@ function setErrorFull(msg, fatal) {
 	} else {
 		errorMsgSetTime = now + 999999; /* Make sure the error doesn't disappear */
 	}
+
+	if (fatal) {
+		/* If notifications are enabled,
+		 * notify user that the application has exited. */
+		if (canDisplayNotifications()) {
+			var notification = new Notification("Webmail disconnected", {
+				body: "Webmail has closed",
+				requireInteraction: false
+			});
+			notification.onshow = function(event) {
+				setTimeout(function () {
+					notification.close();
+				}, 5000);
+			};
+			console.debug("Dispatched notification");
+		}
+	}
 }
 
 function clearStatus() {
