@@ -2119,6 +2119,18 @@ function handleMessage(e) {
 				frame.contentWindow.document.write(body);
 				frame.contentWindow.document.close();
 
+				/* Make sure the frame takes up at least the entire space available, since the default height is quite small (150px?)
+				 * frame.contentWindow.document.body.scrollHeight will give us the height of the HTML document, but that is NOT what we should set the height to.
+				 * Instead, we want to aim for just under the number of pixels actually available for content,
+				 * hence subtracting a small number of pixels to avoid overshooting and adding a second scrollbar.
+				 * This way, there's just one scrollbar for the HTML content.
+				 *
+				 * Behavior for HTML messages is slightly different, since scrolling doesn't dismiss the headers (#msg-headers),
+				 * while for plaintext, it does, but that's partly due to the structural differences from using an iframe for HTML.
+				 */
+				var frameheight = document.getElementById('messages').clientHeight - document.getElementById('messagelist').clientHeight - document.getElementById('msg-headers').clientHeight;
+				frame.style.height = (frameheight - 25) + "px";
+
 				if (!allowExternalRequests) {
 					//frame.setAttribute("csp", "default-src 'none'; img-src 'none';"); /* XXX Doesn't have any effect, so use a CSP instead: */
 

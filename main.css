@@ -19,6 +19,9 @@ a {
 	width: 100%;
 	height: calc(100% - 50px);
 }
+body {
+	font-size: 0.8em; /* Make the interface more compact */
+}
 #statusbar {
 	height: 25px;
 	width: 100%;
