@@ -180,7 +180,8 @@ input[type=text] {
 	<div id="settings">
 		<h1>Settings</h1>
 		<p>Note that these settings are saved locally in your browser, and are not account-specific.</p>
-		<p>Settings will update immediately when toggled, but you will need to reload the webmail application.</p>
+		<p>Settings will update immediately when toggled, but some settings (indicated with a <b>*</b>) require you to reload the webmail application.</p>
+
 		<hr>
 		<div id="manage-local-settings" class="form-table">
 		</div>
@@ -199,11 +200,6 @@ input[type=text] {
 	</div>
 	<script src='settings.js'></script>
 	<script src='config.js'></script>
-	<script>
-document.addEventListener('DOMContentLoaded', function() {
-	displaySettings();
-}, false);
-	</script>
 	</body></html>
 	<?php
 	die();

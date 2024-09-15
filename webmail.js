@@ -1076,6 +1076,11 @@ function deleteMessage() {
 		 */
 		markDeleted();
 	} else {
+		if (getBoolSetting("automarkseen")) {
+			/* Thunderbird-based clients implicitly mark messages seen when deleting,
+			 * so that unread messages don't show up in the trash. */
+			markRead();
+		}
 		moveTo(trashFolder);
 	}
 }
@@ -1087,6 +1092,9 @@ function junkMessage() {
 	} else if (junkFolder === selectedFolder) {
 		setError("Message already in junk folder");
 	} else {
+		if (getBoolSetting("automarkseen")) {
+			markRead();
+		}
 		moveTo(junkFolder);
 	}
 }

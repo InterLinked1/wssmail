@@ -40,7 +40,13 @@ function addBoolSetting(container, labelText, labelID, setting) {
 
 function displaySettings() {
 	var c = document.getElementById('manage-local-settings');
-	addBoolSetting(c, "Force Labels - Display labels, not icons", 'force-labels', 'forcelabels');
+
+	/* Boolean settings */
+	for (var i = 0; i < localSettings.length; i++) {
+		var s = localSettings[i];
+		addBoolSetting(c, s.labelText, s.labelID, s.setting);
+	}
+
 	/* Identities */
 	displayIdentities();
 	console.log(document.getElementById('add-identity'));
@@ -78,3 +84,8 @@ function setIdentity(add) {
 	setArraySetting('identities', idents);
 	displayIdentities();
 }
+
+/* Display settings selection on page load */
+document.addEventListener('DOMContentLoaded', function() {
+	displaySettings();
+}, false);
