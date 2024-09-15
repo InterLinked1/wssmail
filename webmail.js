@@ -1811,7 +1811,16 @@ function doDownload(filename, content) {
 var lastCheckedIndex = null;
 
 function selectAllClick(e, obj) {
-	if (allSelected) {
+	console.log(obj.checked);
+	/* If the selection checkbox is checked, unselect everything.
+	 * The condition here is a bit counterintuitive, since
+	 * we want to unselect everything if the checkbox is already checked.
+	 * However, I think because this is a passive event, when this checkbox
+	 * is unchecked and we check it, this is now true by the time this code executes,
+	 * and conversely, if we uncheck it, it is now false by the time we get here.
+	 * Thus, to get the previous checkbox state (which is what we want), we
+	 * need to invert it. */
+	if (!obj.checked) {
 		/* Unselect everything */
 		unselectAllUIDs();
 		allSelected = false;
