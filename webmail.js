@@ -569,12 +569,29 @@ function addToFolderMenu(details, searchParams, parent, folder) {
 		if (noselect) {
 			li.innerHTML = "<span class='foldername" + extraClasses + "'>" + prefix + dispname + "<span class='folderunread'>" + "</span>" + "</span>";
 		} else {
-			li.innerHTML = "<span class='foldername" + extraClasses + "'>" + prefix + "<a href='#' title='" + folder.name + "'>" + dispname + "<span class='folderunread'>" + (folder.unseen > 0 ? " (" + folder.unseen + ")" : "") + "</span></a>" + "</span>";
+			/* Since the link has an event listener (commandSelectFolder),
+			 * we don't need an actual link for the hyperlink and '#' works just fine as a target.
+			 * However, it still shows as a link on the page (as it should), and the hyperlink
+			 * value is thus a bit nonsensical, particularly considering that after clicking on it,
+			 * the URL will change to reflect that folder.
+			 * Additionally, using '#' prevents users from right-clicking and opening a mailbox
+			 * in a new tab. So, do set the URL correctly: */
+			var currentURL = new URL(window.location.href);
+			currentURL.searchParams.set("folder", folder.name); /* Set the folder query param in the link to this folder */
+			var linkURL = currentURL.toString();
+
+			li.innerHTML = "<span class='foldername" + extraClasses + "'>" + prefix + "<a href='" + linkURL + "' title='" + folder.name + "'>" + dispname + "<span class='folderunread'>" + (folder.unseen > 0 ? " (" + folder.unseen + ")" : "") + "</span></a>" + "</span>";
 			li.innerHTML += ("<span class='foldercount'>" + folder.messages + "</span><span class='foldersize'>" + formatSize(folder.size, 0) + "</span>");
 		}
 	}
 	if (!noselect) {
-		li.addEventListener('click', function() { commandSelectFolder(folder.name, false); }, {passive: true});
+		/* Allow clicking the entire li to select, since this gives a wider click area */
+		li.addEventListener('click', function(e) { commandSelectFolder(folder.name, false); return false; }, {passive: true});
+		var a = li.getElementsByTagName("a")[0];
+		/* However, if somebody does click the link, don't actually follow it.
+		 * preventDefault() is needed to prevent clicking a folder from navigating to the link,
+		 * since the target is a valid link rather than just '#' */
+		a.addEventListener('click', function(e) { e.preventDefault(); }, {passive: false});
 	}
 	parent.appendChild(li);
 }
