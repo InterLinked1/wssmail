@@ -672,6 +672,7 @@ startHTML();
 			<?php
 			}
 			?>
+			<noscript><p style='text-align: center; font-weight: 900; font-size: 1.5em;'>This application requires JavaScript to function &mdash; please enable it and reload!</p></noscript>
 		</form>
 	</div>
 	<div id="presets" class="default-hidden">
