@@ -2154,8 +2154,10 @@ function handleMessage(e) {
 				 * Behavior for HTML messages is slightly different, since scrolling doesn't dismiss the headers (#msg-headers),
 				 * while for plaintext, it does, but that's partly due to the structural differences from using an iframe for HTML.
 				 */
-				var frameheight = document.getElementById('messages').clientHeight - document.getElementById('messagelist').clientHeight - document.getElementById('msg-headers').clientHeight;
-				frame.style.height = (frameheight - 25) + "px";
+				if (viewPreview) {
+					var frameheight = document.getElementById('messages').clientHeight - document.getElementById('messagelist').clientHeight - document.getElementById('msg-headers').clientHeight;
+					frame.style.height = (frameheight - 25) + "px";
+				}
 
 				if (!allowExternalRequests) {
 					//frame.setAttribute("csp", "default-src 'none'; img-src 'none';"); /* XXX Doesn't have any effect, so use a CSP instead: */
