@@ -88,7 +88,7 @@ function tryAutoLogin() {
 		localStorage.removeItem("webmail-password"); /* Clear encrypted password */
 	}
 	if (isAutoLogin() && localStorage.getItem("webmail-password") && localStorage.getItem("webmail-iv")) {
-		setStatus("Attempting to login to IMAP server using saved info&#133;");
+		setStatus("Attempting to login to IMAP server using saved info...");
 		console.log("Autoconnecting using saved session info");
 		connect();
 	}
@@ -1545,7 +1545,7 @@ function listTruncate(text, limit) {
 		return "";
 	}
 	if (text.length > limit) {
-		text = text.substring(0, limit) + "&#133;";
+		text = text.substring(0, limit) + "...";
 	}
 	return text;
 }
@@ -2235,6 +2235,9 @@ function handleMessage(e) {
 			addColumnHeading(tr, 'Size');
 			document.getElementById('messagetable').appendChild(tr);
 
+			var w = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+			var maxSubjectLength = 45 + (w > 1000 ? (w > 1500 ? 60 : 30) : 0);
+
 			/* Construct message list table */
 			setQuota(jsonData.quota, jsonData.quotaused);
 			var epoch = Date.now();
@@ -2272,7 +2275,7 @@ function handleMessage(e) {
 				var ahref = document.createElement('a');
 				var uid = jsonData.data[i].uid;
 				ahref.setAttribute('href', '#');
-				ahref.setAttribute('title', escapeHTML(jsonData.data[i].subject));
+				ahref.setAttribute('title', jsonData.data[i].subject);
 				ahref.setAttribute('uid', jsonData.data[i].uid); /* Store UID in a dummy attribute */
 				ahref.textContent = jsonData.data[i].uid;
 				/* Yes, this is needed, we can't reference this as the arg directly: 8 = length of msg-uid- */
@@ -2314,9 +2317,9 @@ function handleMessage(e) {
 
 				ahref = document.createElement('a');
 				ahref.setAttribute('href', '#');
-				ahref.setAttribute('title', escapeHTML(jsonData.data[i].subject));
+				ahref.setAttribute('title', jsonData.data[i].subject);
 				ahref.setAttribute('uid', jsonData.data[i].uid); /* Store UID in a dummy attribute */
-				ahref.textContent = listTruncate(escapeHTML(jsonData.data[i].subject, 30));
+				ahref.textContent = listTruncate(jsonData.data[i].subject, maxSubjectLength);
 				/* Yes, this is needed, we can't reference this as the arg directly: 8 = length of msg-uid- */
 				ahref.addEventListener('click', function() { commandFetchMessage(this.getAttribute("uid")); }, {passive: true});
 				/* Prevent left-clicking and middle-clicking since these will just reopen the folder, not open the message. */
@@ -2330,7 +2333,7 @@ function handleMessage(e) {
 				/* XXX For From/To, add screen tips to show the entire address(es) - will need a subelement, right on the td won't work */
 
 				td = document.createElement('td');
-				//td.setAttribute('title', escapeHTML(jsonData.data[i].from));
+				//td.setAttribute('title', jsonData.data[i].from);
 				td.textContent = formatShortEmail(jsonData.data[i].from);
 				tr.appendChild(td);
 
@@ -2340,7 +2343,7 @@ function handleMessage(e) {
 				}
 
 				td = document.createElement('td');
-				//td.setAttribute('title', escapeHTML(reciplist));
+				//td.setAttribute('title', reciplist);
 				if (reciplist.length > 30) {
 					reciplist = reciplist.substring(0, 30) + "...";
 				}
