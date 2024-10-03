@@ -72,3 +72,4 @@ function registerSetting(labelText, labelID, setting, defaultSetting) {
 /* Settings require page reload are marked with a '*' */
 registerSetting("Display labels in top menu, not icons*", 'force-labels', 'forcelabels', false);
 registerSetting("Automark read when deleting/junking a message", 'automark-seen', 'automarkseen', true);
+registerSetting("Autoreconnect upon server/network disconnect", 'autoreconnect', 'autoreconnect', false);

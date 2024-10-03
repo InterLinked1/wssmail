@@ -5,6 +5,9 @@ var capabilities = [];
 var authcapabilities = [];
 var ws = null;
 
+var ever_session_connected = false;
+var session_connected = false;
+
 var checkedNotifyPerm = false;
 
 var folders = null;
@@ -53,6 +56,29 @@ function disconnect() {
 	if (ws !== null) {
 		ws.close();
 		resetConnection();
+	}
+}
+
+var autoreconnect = null; /* Must be declared for tryAutoReconnect */
+
+function tryAutoReconnect() {
+	if (!window.navigator.onLine) {
+		console.warn("Client is offline...");
+		return;
+	}
+	console.log("Attempting autoreconnect");
+	clearStatus();
+	setStatus("Attempting reconnect to server...");
+	/* If this fails, then we give up, we don't retry multiple times. */
+	tryAutoLogin();
+}
+
+function tryAutoReconnectWrapper() {
+	tryAutoReconnect();
+	if (!session_connected) {
+		autoreconnect = setInterval(function() {
+			tryAutoReconnect();
+		}, 60000);
 	}
 }
 
@@ -431,12 +457,21 @@ function connect() {
 	}
 	ws.onclose = function(e) {
 		console.log("Websocket closed");
-		if (authenticated) {
+		if (ever_session_connected) {
 			setFatalError("The server closed the connection. Please reload the page.");
 		} else {
 			setFatalError("The server closed the connection. Please click 'Log in' to reconnect.");
 		}
 		resetConnection();
+		/* If we were able to successfully connect before, give it another shot */
+		if (getBoolSetting("automarkseen") && session_connected) {
+			/* Wait a little bit, then retry to see if we can connect */
+			console.log("Waiting 25 seconds, then trying to autoreconnect");
+			setTimeout(function() {
+				tryAutoReconnect();
+			}, 25000);
+		}
+		session_connected = false;
 	};
 	ws.onerror = function(e) {
 		console.log("Websocket error");
@@ -1353,7 +1388,7 @@ function setErrorFull(msg, fatal) {
 	if (fatal) {
 		/* If notifications are enabled,
 		 * notify user that the application has exited. */
-		if (canDisplayNotifications()) {
+		if (canDisplayNotifications() && session_connected) {
 			var notification = new Notification("Webmail disconnected", {
 				body: "Webmail has closed",
 				requireInteraction: false
@@ -1909,6 +1944,8 @@ function handleMessage(e) {
 			}
 		} else if (response === "AUTHENTICATED") {
 			authenticated = true; /* If we're getting a LIST response, we must have successfully authenticated */
+			session_connected = true;
+			ever_session_connected = true;
 			document.getElementById('login-container').classList.add('default-hidden');
 			document.getElementById('webmail-container').classList.remove('default-hidden');
 		} else if (response === "LIST") {
