@@ -73,15 +73,6 @@ function tryAutoReconnect() {
 	tryAutoLogin();
 }
 
-function tryAutoReconnectWrapper() {
-	tryAutoReconnect();
-	if (!session_connected) {
-		autoreconnect = setInterval(function() {
-			tryAutoReconnect();
-		}, 60000);
-	}
-}
-
 function authMethodCompatible(name) {
 	if (!authcapabilities.includes(name)) {
 		return false; /* If not offered by server, can't possibly use it */
@@ -464,7 +455,7 @@ function connect() {
 		}
 		resetConnection();
 		/* If we were able to successfully connect before, give it another shot */
-		if (getBoolSetting("automarkseen") && session_connected) {
+		if (getBoolSetting("autoreconnect") && session_connected) {
 			/* Wait a little bit, then retry to see if we can connect */
 			console.log("Waiting 25 seconds, then trying to autoreconnect");
 			setTimeout(function() {
