@@ -477,13 +477,18 @@ function reloadCurrentMessage() {
 	}
 }
 
+function setPreviewPaneHeight(height) {
+	document.getElementById('previewpane').style.height = height + 'px';
+	console.debug("Preview pane height now: " + height);
+}
+
 function togglePreview(elem) {
 	viewPreview = elem.checked;
 	document.getElementById("option-preview").checked = viewPreview;
 	setq('preview', viewPreview ? "yes" : "no");
 	if (!viewPreview) {
 		/* Hide it if we don't need it */
-		document.getElementById('previewpane').style.height = 0;
+		setPreviewPaneHeight(0);
 	}
 	if (viewPreview) {
 		reloadCurrentMessage();
@@ -2154,8 +2159,7 @@ function handleMessage(e) {
 				if (newheight < 50) {
 					setError("Preview pane too small to display. Reduce the page size to increase preview pane height.");
 				}
-				document.getElementById('previewpane').style.height = newheight + 'px';
-				console.debug("Preview pane height now: " + newheight);
+				setPreviewPaneHeight(newheight);
 			}
 
 			if (htmlframe) {
@@ -2225,6 +2229,11 @@ function handleMessage(e) {
 			adjustFolderCount(selectedFolder, 1, 1);
 			notifyNewMessage(jsonData);
 		} else if (response === "FETCHLIST") {
+			/* When loading a page of messages, preview pane is empty so make it 0 height to start.
+			 * This avoids it "spilling off the page" if it was previously used and still has old height,
+			 * and we increase the # of messages to show per page in FETCHLIST.
+			 * The FETCH response handling will set the preview pane height if it is needed. */
+			setPreviewPaneHeight(0);
 			lastCheckedSeqno = null;
 			allSelected = false;
 			if (jsonData.cause === "IDLE" || jsonData.cause === "EXISTS" || jsonData.cause === "EXPUNGE") {
