@@ -618,6 +618,9 @@ function addToFolderMenu(details, searchParams, parent, folder) {
 	if (!noselect) {
 		/* Allow clicking the entire li to select, since this gives a wider click area */
 		li.addEventListener('click', function(e) { commandSelectFolder(folder.name, false); return false; }, {passive: true});
+		li.addEventListener('mouseup', function(e) { clickDragMove(folder.name); }, {passive: true});
+		li.addEventListener('mouseover', function(e) { folderMouseOver(folder.name, li); }, {passive: true});
+		li.addEventListener('mouseleave', function(e) { folderMouseLeave(folder.name, li); }, {passive: true});
 		var a = li.getElementsByTagName("a")[0];
 		/* However, if somebody does click the link, don't actually follow it.
 		 * preventDefault() is needed to prevent clicking a folder from navigating to the link,
@@ -712,10 +715,28 @@ function getSelectedUIDs() {
 	return uids;
 }
 
+function selectMessage(checkbox) {
+	var uid = checkbox.value;
+	checkbox.checked = true;
+	var tr = document.getElementById('msg-uid-' + checkbox.value);
+	if (!tr.classList.contains("messagelist-selected")) {
+		tr.classList.add("messagelist-selected");
+	}
+}
+
+function unselectMessage(checkbox) {
+	var uid = checkbox.value;
+	checkbox.checked = false;
+	var tr = document.getElementById('msg-uid-' + checkbox.value);
+	if (tr.classList.contains("messagelist-selected")) {
+		tr.classList.remove("messagelist-selected");
+	}
+}
+
 function selectAllUIDs() {
 	var checkboxes = document.getElementsByName('msg-sel-uid');
 	for (var checkbox of checkboxes) {
-		checkbox.checked = true;
+		selectMessage(checkbox);
 	}
 }
 
@@ -723,7 +744,7 @@ function unselectAllUIDs() {
 	/* Reset all checkboxes, and check only this one */
 	var checkboxes = document.getElementsByName('msg-sel-uid');
 	for (var checkbox of checkboxes) {
-		checkbox.checked = false;
+		unselectMessage(checkbox);
 	}
 }
 
@@ -735,7 +756,12 @@ function commandFetchMessage(uid) {
 	/* Reset all checkboxes, and check only this one */
 	var checkboxes = document.getElementsByName('msg-sel-uid');
 	for (var checkbox of checkboxes) {
-		checkbox.checked = parseInt(checkbox.value) === parseInt(uid);
+		var selected = parseInt(checkbox.value) === parseInt(uid);
+		if (selected) {
+			selectMessage(checkbox);
+		} else {
+			unselectMessage(checkbox);
+		}
 	}
 	console.log("Fetching message " + uid);
 	var payload = {
@@ -1867,38 +1893,129 @@ function selectAllClick(e, obj) {
 	}
 }
 
+function shiftSelection(index) {
+	/* Check all the messages in the range between the two seqnos */
+	var a, b;
+	/* Starting point and direction depends on direction */
+	if (index > lastCheckedIndex) {
+		a = lastCheckedIndex
+		b = index;
+	} else {
+		a = index;
+		b = lastCheckedIndex;
+	}
+	var s = lastCheckedIndex;
+	console.log("Range selection: " + a + "-" + b);
+	a++;
+	for (; a < b; a++) {
+		var cbox = document.getElementById('msg-sel-index-' + a);
+		if (cbox !== undefined && cbox !== null) {
+			selectMessage(cbox);
+		} else {
+			console.error("No message index: " + a);
+		}
+	}
+}
+
 /* Multi-message range selection */
 function messageClick(e, obj) {
 	var index = parseInt(obj.getAttribute('index'));
 	allSelected = false;
 	document.getElementById('select-all-cbox').checked = false;
 	if (lastCheckedIndex !== null && e.shiftKey) { /* Shift selection */
-		/* Check all the messages in the range between the two seqnos */
-		var a, b;
-		/* Starting point and direction depends on direction */
-		if (index > lastCheckedIndex) {
-			a = lastCheckedIndex
-			b = index;
-		} else {
-			a = index;
-			b = lastCheckedIndex;
-		}
-		var s = lastCheckedIndex;
-		console.log("Range selection: " + a + "-" + b);
-		a++;
-		for (; a < b; a++) {
-			var cbox = document.getElementById('msg-sel-index-' + a);
-			if (cbox !== undefined && cbox !== null) {
-				cbox.checked = true;
-			} else {
-				console.error("No message index: " + a);
-			}
-		}
+		shiftSelection(index);
 	}
 	if (obj.checked) {
 		lastCheckedIndex = index;
+		selectMessage(obj);
 	} else {
 		lastCheckedIndex = null;
+		unselectMessage(obj);
+	}
+}
+
+function messageSubjectClick(e, obj) {
+	var index = parseInt(obj.parentElement.getAttribute('index'));
+	var cbox = document.getElementById('msg-sel-index-' + index);
+	allSelected = false;
+	document.getElementById('select-all-cbox').checked = false;
+	/* If the row for a message is clicked, and a modifier key is held down, select it */
+	console.log("last checked index: " + lastCheckedIndex);
+	if (lastCheckedIndex !== null && e.shiftKey) { /* Shift selection */
+		shiftSelection(index);
+		selectMessage(cbox); /* shiftSelection selected everything except the clicked message, so we need this */
+	} else if (e.ctrlKey) { /* CTRL */
+		/* Add to what's currently selected, without deselecting anything already selected,
+		 * unless the clicked message is already selected, then unselect it. */
+		if (cbox.checked) {
+			unselectMessage(cbox);
+		} else {
+			selectMessage(cbox);
+		}
+	} else {
+		/* Replace existing selection with just this item */
+		unselectAllUIDs();
+		allSelected = false;
+		obj.checked = false;
+		selectMessage(cbox);
+	}
+	lastCheckedIndex = index;
+}
+
+var clickAndDragInProgress = false;
+
+function mouseDownHandler(e, obj) {
+	var downTarget = e.target;
+	/* Is this one of the subject areas? That's the only place from which it's valid to begin a click'n drag operation. */
+	clickAndDragInProgress = e.target.parentElement.hasAttribute('index');
+	if (clickAndDragInProgress) {
+		e.preventDefault(); /* Prevent default to avoid selecting text on page */
+		console.log("Click and drag started");
+	}
+}
+
+function canClickAndDrag() {
+	if (!clickAndDragInProgress) {
+		return false;
+	}
+
+	/* Is anything selected? */
+	var checkboxes = document.getElementsByName('msg-sel-uid');
+	for (var checkbox of checkboxes) {
+		if (checkbox.checked) {
+			return true;
+		}
+	}
+	return false;
+}
+
+/* Click and drag to move messages to folder */
+function clickDragMove(targetFolder) {
+	if (!canClickAndDrag()) {
+		return;
+	}
+
+	/* A selection is active, move the messages! */
+	console.log("Moving selected messages to " + targetFolder);
+	moveTo(targetFolder);
+}
+
+/* Make it more obvious that an action is in progress */
+function folderMouseOver(targetFolder, li) {
+	if (!canClickAndDrag()) {
+		return;
+	}
+	if (!li.classList.contains("folder-hover")) {
+		li.classList.add("folder-hover");
+	}
+}
+
+function folderMouseLeave(targetFolder, li) {
+	if (!canClickAndDrag()) {
+		return;
+	}
+	if (li.classList.contains("folder-hover")) {
+		li.classList.remove("folder-hover");
 	}
 }
 
@@ -2226,6 +2343,18 @@ function handleMessage(e) {
 			/* FETCHLIST due to EXISTS will not update folder counts,
 			 * since we can do it ourselves.
 			 * If an EXPUNGE occurs, then the server will tell us the new counts. */
+
+			/* XXX
+			 * There is a big problem here. Just because we got an EXISTS, doesn't mean the message is unseen!
+			 * It could be a new message, but it could be a message that somebody copied here for some other reason.
+			 * In the latter case, we should really NOT notify the user about this being a "new" message,
+			 * and we shouldn't increment the unseen count.
+			 * The server should send an untagged RECENT, if it actually is brand new, though I don't
+			 * think this info is passed by mod_webmail to us currently.
+			 *
+			 * Since we need the flags to determine if this is new or not,
+			 * not sure what a good way to infer this is; for now, we just assume it's new, since that's the common case,
+			 * but technically this is wrong. */
 			adjustFolderCount(selectedFolder, 1, 1);
 			notifyNewMessage(jsonData);
 		} else if (response === "FETCHLIST") {
@@ -2282,6 +2411,7 @@ function handleMessage(e) {
 			var index = 1; /* Don't use sequence number, in case there is some other ordering to messages */
 			for (var i = 0; i < jsonData.data.length; i++) {
 				var tr = document.createElement('tr');
+				tr.setAttribute('index', index); /* Same as index attribute for the checkbox input */
 				tr.setAttribute('id', 'msg-uid-' + jsonData.data[i].uid);
 				var flags = jsonData.data[i].flags;
 				if (!flags.includes("\\Seen")) {
@@ -2366,6 +2496,9 @@ function handleMessage(e) {
 				td = document.createElement('td');
 				td.appendChild(ahref);
 				tr.appendChild(td);
+
+				/* Add click listener for the subject area, for selection purposes if CTRL or SHIFT are held down */
+				td.addEventListener('click', function(e) { messageSubjectClick(e, this); }, {passive: true});
 
 				/* XXX For From/To, add screen tips to show the entire address(es) - will need a subelement, right on the td won't work */
 
@@ -2505,6 +2638,8 @@ document.getElementById('option-preview').addEventListener('change', function() 
 document.getElementById('option-html').addEventListener('change', function() { toggleHTML(this); }, {passive: true});
 document.getElementById('option-extreq').addEventListener('change', function() { toggleExternalRequests(this); }, {passive: true});
 document.getElementById('option-raw').addEventListener('change', function() { toggleRaw(this); }, {passive: true});
+
+document.addEventListener('mousedown', function(e) { mouseDownHandler(e, this); }, {passive: false});
 
 /* If we can log in automatically, do so */
 tryAutoLogin();
