@@ -36,7 +36,7 @@ Why yet another webmail package? There are a few key features and capabilities t
     - Set the priority of outgoing messages
     - Set the Reply To address of outgoing messages
 
-- **Lightweight** - wssmail was developed to be a small project, very lightweight and easy to work on. Personally, I am mainly a C developer and not a JavaScript fan, and I've focused on keeping the codebase as simple as possible. The entire frontend (HTML, CSS, and JavaScript) is under 2,000 lines of code currently. That will probably grow over time, but it shows you don't need MBs of libraries in order to create something useful. (The backend is also under 2,000 lines of C code). This makes wssmail very fast to load, and easy for people to understand how it works and contribute to it.
+- **Lightweight** - wssmail was developed to be a small project, very lightweight and easy to work on. Personally, I am mainly a C developer and not a JavaScript fan, and I've focused on keeping the codebase as simple as possible. The entire frontend (HTML, CSS, and JavaScript) is under 3,000 lines of code currently. That will probably grow over time, but it shows you don't need MBs of libraries in order to create something useful. (The backend is also under 4,000 lines of C code). This makes wssmail very fast to load, and easy for people to understand how it works and contribute to it.
 
 **Note:**
 

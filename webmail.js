@@ -854,10 +854,21 @@ function editor(name, from, to, cc, subject, body, inreplyto, references) {
 	var tab = window.open('about:blank', '_blank');
 	tab.document.write(childhtml);
 	tab.document.close(); /* Finish loading page */
+	if (name === "Compose" || name === "Forward") {
+		tab.document.getElementById('to').focus(); /* For new messages and forwards, focus the 'To' field since that will generally need to be filled in first */
+	} else {
+		tab.document.getElementById('compose-body').focus(); /* For replies, we can just focus the body immediately */
+	}
 }
 
 function compose() {
-	editor("Compose", '', '', '', '', '', '', '');
+	/* It isn't actually necessary to initialize 'From' explicitly to document.getElementById('fromaddress').value
+	 * (though we do use that as the placeholder).
+	 * smtp.php will use the username (which is what fromaddress is) as the default anyways.
+	 *
+	 * Nonetheless, we do this to make it clearer to the user that this is what will actually be used unless s/he changes it,
+	 * it's not just a suggestion. */
+	editor("Compose", document.getElementById('fromaddress').value, '', '', '', '', '', '');
 }
 
 function doReply(replyto, replycc) {

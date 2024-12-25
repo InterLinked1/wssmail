@@ -55,8 +55,8 @@ function send_message(array $webMailCookie, bool $send) {
 	$smtpDebug = false; /* Enable for SMTP debugging */
 	$connInfo = "Connecting to ";
 	$progname = "wssmail";
-	$progver = "0.1.0";
-	/* The only actual mandatory field here is "To". */
+	$progver = "0.1.1";
+	/* The only actual mandatory fields here is "To". */
 	if (strlen($_POST['to']) < 1) {
 		return "Missing recipient (To)";
 	}
@@ -89,9 +89,13 @@ function send_message(array $webMailCookie, bool $send) {
 	if (strlen($subject) > 0) {
 		$msg .= "Subject: $subject\r\n";
 	}
-	if (strlen($from) < 1) {
+	if (!(strlen($from) > 0)) {
 		$from = $webMailCookie['username']; /* Default to the username (which is probably a user@domain) */
 	}
+	if (!(strlen($from) > 0)) {
+		return "Missing From";
+	}
+
 	$msg .= "From: $from\r\n";
 	if (strlen($replyto) > 0) {
 		$msg .= "Reply-To: $replyto\r\n";
