@@ -645,8 +645,12 @@ function checkNotificationPermissions() {
 	}
 }
 
+var firstSelection = true;
+
 function commandSelectFolder(folder, autoselected) {
-	setq('page', 1); /* Reset to first page of whatever folder was selected */
+	if (!firstSelection) {
+		setq('page', 1); /* Reset to first page of whatever folder was selected */
+	}
 	var payload = {
 		command: "SELECT",
 		folder: folder,
@@ -2195,7 +2199,12 @@ function handleMessage(e) {
 				drawFolderMenu(); /* Redraw folder list */
 			}
 		} else if (response === "SELECT") {
-			pageNumber = 1; /* Reset to 1 whenever we successfully move to a new folder */
+			/* If we reload, and a particular page was selected, we should retain that.
+			 * However, we should reset to 1 whenever we successfully move to a new folder. */
+			if (!firstSelection) {
+				pageNumber = 1;
+			}
+			firstSelection = false;
 			responseSelectFolder(jsonData);
 		} else if (response === "FETCH") {
 			if (viewRaw) {
@@ -2609,25 +2618,69 @@ function handleMessage(e) {
 			if (jsonData.numpages > 1) {
 				/* Pagination required */
 				/* We have to do this the clunky way of appending all these children due to the event listeners we need to attach. */
+
+				/* Prev page link */
+				var prevPage = pageNumber - 1 < 1 ? 1 : pageNumber - 1;
+				var prevOuter = document.createElement('span');
+				if (pageNumber > 1) {
+					var prevA = document.createElement('a');
+					prevA.setAttribute('href', '#');
+					prevA.setAttribute('title', 'Page ' + prevPage);
+					prevA.addEventListener('click', function() { commandFetchList(prevPage); }, {passive: true});
+					prevA.innerHTML = "<< Previous";
+					prevOuter.appendChild(prevA);
+				} else {
+					prevOuter.innerHTML = "<< Previous";
+				}
+				pagesparent.appendChild(prevOuter);
+
+				/* Direct jump links */
 				var i;
 				var skip = false;
+				/* A jump width of 7 may not seem very high, particularly if you're on the first page, as it typical for viewing the most recent messages.
+				 * However, worst cases, there are thousands of pages, and that means the majority of page numbers take up 4 columns.
+				 * Additionally, if you are in the middle region, then the jump width is applied on both sides...
+				 * e.g. Prev 1 2 3 4 5 6 7 ... 1001 1002 1003 1004 1005 1006 1007 [1008] 1009 1010 1011 1012 1013 1014 1015 ... 2991 2992 2993 2994 2995 2996 2997 Next
+				 *
+				 * So in the worst case, we have Prev + first 7 + previous 7 + current + next 7 + last 7 + Next = 31 jump page links!
+				 * (Worst case # of links = 4 * jumpwidth + 3)
+				 *
+				 * So, that's why doing more than 7, even on wider monitors, can be problematic. */
+				var jumpwidth = document.body.scrollWidth > 1600 ? 7 : 5; /* Adjust this to control how many pages are shown for direct jumping. */
 				var numpages = jsonData.numpages;
 				for (i = 1; i <= numpages; i++) {
-					if (i > 5 && i < numpages - 5 && Math.abs(pageNumber - i) > 5) {
+					/* The "skip" var is for when there is a break in consecutive page numbering */
+					if (i > jumpwidth && i <= numpages - jumpwidth && Math.abs(pageNumber - i) > jumpwidth) {
 						if (skip === false) {
 							var x = document.createElement('span');
 							x.innerHTML = " | &#133; ";
 							pagesparent.appendChild(x);
 						}
 						skip = true;
+						/* To be more efficient, rather than making numpages loop iterations,
+						 * which could waste thousands of CPU cycles for no reason,
+						 * calculate what the next useful value of i is and set to that.
+						 *
+						 * (There are 3 intervals, first jumpwidth pages, the jumpwidth pages
+						 *  near the current page, and the last jumpwidth pages.). */
+						/* i is guaranteed to be > jumpwidth if we are here, so that is not a useful check. */
+						var jBefore = pageNumber - jumpwidth - 1; /* Subtract 1 more since the loop post increments i */
+						if (i < jBefore) {
+							i = jBefore;
+						} else {
+							/* i > jBefore, so skip right to just before the last J pages. */
+							var jAfter = numpages - jumpwidth; /* No need to subtract 1 here, since it's i <= numpages - jumpwidth, not i < numpages - jumpwidth */
+							if (i < jAfter) {
+								i = jAfter;
+							}
+						}
 						continue; /* Skip pages in the middle, unless they're near the current page */
 					}
 					skip = false;
-					if (i > 1) {
-						var x = document.createElement('span');
-						x.innerHTML = " | ";
-						pagesparent.appendChild(x);
-					}
+					/* Since we have "Previous", add | before first page, too */
+					var x = document.createElement('span');
+					x.innerHTML = " | ";
+					pagesparent.appendChild(x);
 					var outer = document.createElement(i == pageNumber ? 'b' : 'span');
 					var a = document.createElement('a');
 					a.setAttribute('href', '#');
@@ -2638,6 +2691,26 @@ function handleMessage(e) {
 					outer.appendChild(a);
 					pagesparent.appendChild(outer);
 				}
+
+				/* Since we have "Next" last, add a pipe before that, too */
+				var x = document.createElement('span');
+				x.innerHTML = " | ";
+				pagesparent.appendChild(x);
+
+				/* Next page link */
+				var nextPage = pageNumber + 1 > numpages ? numpages : pageNumber + 1;
+				var nextOuter = document.createElement('span');
+				if (pageNumber < numpages) {
+					var nextA = document.createElement('a');
+					nextA.setAttribute('href', '#');
+					nextA.setAttribute('title', 'Page ' + prevPage);
+					nextA.addEventListener('click', function() { commandFetchList(nextPage); }, {passive: true});
+					nextA.innerHTML = "Next >>";
+					nextOuter.appendChild(nextA);
+				} else {
+					nextOuter.innerHTML = "Next >>";
+				}
+				pagesparent.appendChild(nextOuter);
 			}
 		} else {
 			console.error("Unknown response type " + response);
