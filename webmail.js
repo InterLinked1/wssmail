@@ -865,11 +865,14 @@ function doReply(replyto, replycc) {
 	var replysubject = lastsubject.substring(0, 3) === "Re:" ? lastsubject : ("Re: " + lastsubject); /* Don't prepend Re: if it's already there */
 
 	/* Quote each line of the original message */
-	/* XXX If we fetched the HTML or message source (raw), we should fetch the plain text component to reply to */
+	/* XXX If we fetched the HTML or message source (raw), we should fetch the plain text component to reply to
+	 * XXX Maybe not... for example, Thunderbird-based clients will use the PT or HTML version for replies depending on what was replied to,
+	 * so there may be an advantage to allowing the user to choose... */
 	var bodyMsg = (lastbody !== undefined ? lastbody.split('\r\n') : "");
 	var replybody = "";
-	/* XXX This is not quite correct - use right format for date + only sender name, if name available */
-	replybody += "On " + formatDate(0, lastsent) + ", " + lastfrom + " wrote:\r\n"
+	/* Date should never be abbreviated, even if today, we always include the date.
+	 * Also, the sender's name should not include the email, if a name is present. */
+	replybody += "On " + formatDateNonabbreviated(0, lastsent) + ", " + formatDisplayName(lastfrom) + " wrote:\r\n"
 	for (var b in bodyMsg) {
 		b = bodyMsg[b];
 		replybody += ">" + b + "\r\n";
@@ -1553,13 +1556,13 @@ function displayFormatFlowed(body, flowed) {
 	return f;
 }
 
-function formatDate(epoch, timestamp) {
+function formatDateFull(epoch, timestamp, abbreviate_today) {
 	var epochms = timestamp * 1000;
 	var newdate = new Date(epochms); /* Accepts ms since epoch */
 	var today = new Date();
 	/* If the timestamp is today, don't display date, just the time.
 	 * This is what Thunderbird-based clients, etc. do. */
-	if (newdate.toDateString() === today.toDateString()) { /* It's today */
+	if (abbreviate_today && newdate.toDateString() === today.toDateString()) { /* It's today */
 		newdate = newdate.toLocaleTimeString();
 	} else {
 		newdate = newdate.toLocaleString();
@@ -1570,6 +1573,14 @@ function formatDate(epoch, timestamp) {
 		}
 	}
 	return newdate;
+}
+
+function formatDateAbbreviated(epoch, timestamp) {
+	return formatDateFull(epoch, timestamp, 1);
+}
+
+function formatDateNonabbreviated(epoch, timestamp) {
+	return formatDateFull(epoch, timestamp, 0);
 }
 
 function escapeHTML(html) {
@@ -1592,10 +1603,34 @@ function formatShortEmail(email) {
 	if (email.length > 23) {
 		var arrpos = email.indexOf('<');
 		if (arrpos !== -1) {
-			email = email.substring(0, arrpos); /* Include only the name if it's too long */
+			/* Include only the name if it's too long */
+			email = email.substring(0, arrpos - 1); /* There is a space between name and <, don't include it */
 		}
 	}
 	return email;
+}
+
+function formatDisplayName(addrspec) {
+	var arrpos = addrspec.indexOf('<');
+	if (arrpos !== -1) {
+		if (arrpos > 1) {
+			/* Something like name <email>,
+			 * we just want to return the name.
+			 *
+			 * Furthermore, if it's quoteed (e.g. "name" <email>,
+			 * we shouldn't include the quotes. */
+			addrspec = addrspec.substring(0, arrpos - 1); /* There is a space between name and <, don't include it */
+		} else {
+			/* <email>, just return email (no <>) */
+			return addrspec.substring(arrpos + 1, addrspec.length - 1);
+		}
+	}
+	/* No <>, so it's just an email with no name, return as is */
+	/* This is where we filter quotes, if present */
+	if (addrspec.charAt(0) === '"') {
+		addrspec = addrspec.substring(1, addrspec.length - 2); /* Skip first and last char */
+	}
+	return addrspec;
 }
 
 function listTruncate(text, limit) {
@@ -2193,7 +2228,7 @@ function handleMessage(e) {
 
 			if (!viewRaw) {
 				msg += "<div id='msg-headers'>";
-				msg += "<div class='msg-sent'><span class='hdr-name'>Date</span><span class='hdr-val'>" + formatDate(0, jsonData.sent) + "</span></div>";
+				msg += "<div class='msg-sent'><span class='hdr-name'>Date</span><span class='hdr-val'>" + formatDateAbbreviated(0, jsonData.sent) + "</span></div>";
 				msg = displayHeader(msg, "From", jsonData.from);
 				msg = displayHeader(msg, "Subject", jsonData.subject);
 				/* XXX Could be multiple To, Cc, Reply-To, need to iterate over array */
@@ -2521,8 +2556,8 @@ function handleMessage(e) {
 				td.textContent = reciplist;
 				tr.appendChild(td);
 
-				var received = formatDate(epoch, jsonData.data[i].received);
-				var sent = formatDate(epoch, jsonData.data[i].sent);
+				var received = formatDateAbbreviated(epoch, jsonData.data[i].received);
+				var sent = formatDateAbbreviated(epoch, jsonData.data[i].sent);
 
 				td = document.createElement('td');
 				td.textContent = received;
