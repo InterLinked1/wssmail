@@ -72,7 +72,7 @@ php composer.phar install
 
 Alternately, if you already have PHPMailer via Composer on your system, you can specify the path to the autoload file in `config.php`.
 
-Basic configuration of your frontend web server is required for the frontend site. There are two ways you can host this application:
+Basic configuration of your frontend web server is required for the frontend site. There are three ways you can host this application:
 
 * Run the frontend and backend on separate servers. You'll need to specify the WebSocket server info in `config.php`.
 * Run the frontend and backend on the same server, and reverse proxy WebSocket connections to the backend. This could be done as follows, for an Apache HTTP virtualhost:
@@ -83,8 +83,27 @@ RewriteCond %{HTTP:Upgrade} =websocket [NC]
 RewriteRule /(.*)           ws://localhost:8143/webmail [P,L]
 ```
 
-(This assumes that 8143 is your WebSocket port, as configured in LBBS's `net_ws.conf`). Note that this connection is not encrypted, but this is a loopback connection so that does not matter.
-If you are running the components on different servers, be sure to use TLS for everything.
+* Run the frontend and backend on separate servers, and reverse proxy WebSocket connections to the backend server. The Apache HTTP configuration would be as the previous one, with localhost substituted for the backend server. One reason to prefer this over the first optio (directly specifying the backend WebSocket connection details in the configuration) is the WebSocket server wouldn't be required to use TLS, since this will be offloaded to the Apache WebSocket connection before it's reverse-proxied.
+
+(This assumes that 8143 is your WebSocket port, as configured in LBBS's `net_ws.conf`). Note that this connection is not encrypted, but if this is a loopback connection, it does not matter.
+If you are running the components on different servers, be sure to use TLS for everything unless the network is trusted.
+
+### Networking Note
+
+There are four different server roles involved with this webmail program, all of which could theoretically be running on different servers (but, in the simplest configuration, could all be roles running on the same server). They are:
+
+* Frontend web server, running a web server of your choice (e.g. Apache HTTP web server) and PHP. This is what receives requests directly from the user. Some operations, like sending mail using SMTP and uploading copies of sent mail via IMAP, are performed directly by the frontend server using the `php_imap` plugin.
+* Backend server, running LBBS. This handles WebSocket connections from the frontend (using LBBS's `net_ws`) and sets up a persistent IMAP connections used for most operations, leveraging LBBS's `mod_webmail`, which itself uses the `libetpan` email client library.
+* IMAP server
+* SMTP server
+
+### Configuration Note
+
+There are caveats and "gotchas" to the configuration, depending on your server arrangement. In particular, to connect to a mail server running on the same machine as either the frontend or the backend web server, you should **NOT** use `localhost` for any configuration, such as server hostnames for IMAP or SMTP, if your frontend and backend servers are different (i.e. not running on the same machine).
+
+The reason for this is that while most connections to the IMAP server are originated from the backend server, certain IMAP connections as well as all SMTP connections are originated directly from the frontend web server. This means if `localhost` is used for either of these settings, `localhost` on the frontend and backend servers will each refer to themselves, rather than to the same web server. Due to the differing frames of reference, certain operations will fail unless both web servers happen to be running IMAP/SMTP as well (which, even if they were, is very likely not the configuration you intended). For example, you may be able to successfully send a message, but then upload the copy of the sent message to the wrong server, or fail to upload it altogether. To work around this, use only "absolute" IP addresses that unambigously refer to the same host on both web servers.
+
+If your frontend web server, backend server, and IMAP/SMTP services are all truly running on the same machine, then there is no risk to using `localhost`. As a good rule of thumb, when multiple servers are involved, avoid using `localhost` anywhere, particularly for the IMAP server hostname, since depending on if the frontend or the backend is carrying out the operation, this would refer to different servers.
 
 ## Configuring
 

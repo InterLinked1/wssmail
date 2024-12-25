@@ -53,6 +53,7 @@ function resetConnection() {
 }
 
 function disconnect() {
+	console.log("Disconnecting...");
 	if (ws !== null) {
 		ws.close();
 		resetConnection();

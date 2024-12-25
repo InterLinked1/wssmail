@@ -43,8 +43,31 @@ function setPreset(provider) {
 	var smtpsecurity = presetdiv.querySelector("input[name='smtpsecurity").value;
 	var smtpport = presetdiv.querySelector("input[name='smtpport").value;
 	var append = presetdiv.querySelector("input[name='append").value;
+	/* If we connected to a server to query its capabilities, disconnect from it,
+	 * so we can connect to the next server. */
 	disconnect();
 	autoconfigure(server, security, port, smtpserver, smtpsecurity, smtpport, append);
+}
+
+var firstLoad = true;
+
+function selectDefaultPreset() {
+	if (!firstLoad || isAutoLogin()) {
+		/* If we are logging in with saved credentials, that process have begun already,
+		 * since webmail.js is loaded before login.js, i.e. by the time selectDefaultPreset()
+		 * is called, a connection could be in progress to try to set up the connection.
+		 * So if isAutoLogin() is true, skip, so we don't call disconnect() in setPreset(). */
+		return;
+	}
+	/* Only automatically select preset on first attempt, not successive attempts */
+	firstLoad = false;
+	var presetcontainer = document.getElementById('loginpreset');
+	/* Index 0 corresponds to the empty option (no selection made)
+	 * Will be true if $defaultPreset is nonempty in config.php. */
+	if (presetcontainer.selectedIndex > 0) {
+		console.log("Automatically selecting default preset at index " + presetcontainer.selectedIndex);
+		setPreset(presetcontainer.options[presetcontainer.selectedIndex].text);
+	}
 }
 
 /* RFC 6186 support */
@@ -100,3 +123,5 @@ document.getElementById('lookup-btn').addEventListener('click', function() {
 	fetchDNS("imaps", domain); /* Only look up IMAPS, not IMAP */
 	fetchDNS("submission", domain);
 });
+
+selectDefaultPreset();

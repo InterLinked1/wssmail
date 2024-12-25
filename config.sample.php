@@ -12,14 +12,18 @@
 # NOTE: YOU MUST CHANGE THIS KEY!
 # $settings['jwt']['key'] = 'dzI6nbW4OcNF-AtfxGAmuyz7IpHRudBI0WgGjZWgaRJt6prBn3DARXgUR8NVwKhfL43QBIU2Un3AvCGCHRgY4TbEqhOi8-i98xxmCggNjde4oaW6wkJ2NgM3Ss9SOX9zS3lcVzdCMdum-RwVJ301kbin4UtGztuzJBeg5oVN00MGxjC2xWwyI0tgXVs-zJs5WlafCuGfX1HrVkIf5bvpE0MQCSjdJpSeVao6-RSTYDajZf7T88a2eVjeW31mMAg-jzAWfUrii61T_bYPJFOXW8kkRWoa1InLRdG6bKB9wQs9-VdXZP60Q4Yuj_WZ-lO7qV9AEFrUkkjpaDgZT86w2g';
 
-/* Hostnames/IP addresses for which TLS certificates will not be validated. */
+/* Hostnames/IP addresses for which TLS certificates will not be validated. Currently only used for SMTP connections. */
 $settings['tls']['noverify'] = array('localhost', '127.0.0.1');
 
 /* Hostname of WebSocket backend. By default, WebSocket connections are made to the same hostname
  * from which the website is served, and your backend server can reverse proxy to a different port if needed.
- * If the webmail backend (LBBS net_ws and mod_webmail) are running on a different server than your web server,
+ * If the webmail backend (LBBS net_ws and mod_webmail) is running on a different server than your web server,
  * you can provide the hostname of the BBS server here. This will cause the WebSocket connection
  * to be established to the other server directly.
+ *
+ * Alternately, you can configure the web server hosting the frontend (e.g. Apache HTTP Server)
+ * to reverse proxy websocket connections to the appropriate server.
+ *
  * Note that IMAP hostnames are relative to the backend WebSocket server, NOT the frontend web server serving PHP.
  * For example, "localhost" would refer to the backend server, not the frontend server, since the WebSocket server
  * is what establishes the IMAP connection forward, on behalf of the client.
@@ -59,9 +63,14 @@ $settings['login']['imap']['append'] = true; # Save copies of sent messages to I
 
 /* You can configure presets from which users can choose. Be sure to include ALL settings. */
 
-/*
 $i = 0;
 
+/* By default, no preset is preselected. To have a specific one preselected,
+ * set this variable to the name of the preset to preselect.
+ * Other presets may still be chosen by the user. */
+$defaultPreset = "";
+
+/*
 $settings['presets'][$i]['name'] = 'BBS';
 $settings['presets'][$i]['imap']['server'] = 'example.org';
 $settings['presets'][$i]['imap']['security'] = 'tls';

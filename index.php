@@ -510,7 +510,9 @@ startHTML();
 							<?php
 							if (isset($settings['presets'])) {
 								foreach ($settings['presets'] as $preset) {
-									echo "<option value='" . $preset['name'] . "'>" . $preset['name'] . "</option>";
+									/* If a cookie saved, we are going to attempt autologin anyways immediately, so no point in obeying the preset for that. */
+									$selected = (isset($defaultPreset) && $defaultPreset === $preset['name']) && !isset($webMailCookie['username']) ? " selected" : "";
+									echo "<option value='" . $preset['name'] . "'$selected>" . $preset['name'] . "</option>";
 								}
 							}
 							?>
