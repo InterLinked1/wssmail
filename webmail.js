@@ -2285,7 +2285,26 @@ function handleMessage(e) {
 				msg += "<h4>Attachments</h4>";
 				msg += "<ul>";
 				for (i = 0; i < jsonData.attachments.length; i++) {
-					msg += "<li>" + jsonData.attachments[i].name + " (" + formatSize(jsonData.attachments[i].size) + ")</li>";
+					if (jsonData.attachments[i].altered !== undefined && jsonData.attachments[i].altered !== false) {
+						var detach_tip = jsonData.attachments[i].altered === "detached" ? "Detached" : "Deleted";
+						if (jsonData.attachments[i].altered_time) {
+							detach_tip += " on " + jsonData.attachments[i].altered_time;
+						}
+						if (jsonData.attachments[i].detached_location) {
+							detach_tip += " to " + jsonData.attachments[i].detached_location;
+						}
+						msg += "<li class='msg-attachment-detached'>";
+						detach_tip = detach_tip.replace(/'/g, "&#39;"); /* Might not be needed, since ' is URL-encoded by Mozilla clients, but shouldn't hurt */
+						msg += "<span title='" + detach_tip + "'>";
+					} else {
+						msg += "<li>";
+						msg += "<span>";
+					}
+					/* Mozilla clients prepend "Deleted: " to the original attachment name for deletions,
+					 * but not detachments, so that also allows distinguishing the two without viewing the screen tip. */
+					msg += jsonData.attachments[i].name;
+					msg += "</span>";
+					msg += " (" + formatSize(jsonData.attachments[i].size) + ")</li>";
 				}
 				msg += "</ul>";
 				msg += "</div>";
@@ -2476,6 +2495,9 @@ function handleMessage(e) {
 				}
 				if (flags.includes("\\Recent")) {
 					tr.classList.add("messagelist-recent");
+				}
+				if (flags.includes("\\Deleted")) {
+					tr.classList.add("messagelist-deleted");
 				}
 
 				var td;

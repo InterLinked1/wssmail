@@ -27,6 +27,10 @@
 .msg-attachments h4 {
 	font-weight: 500;
 }
+.msg-attachment-detached {
+	text-decoration: line-through;
+	color: #6f6f6f;
+}
 
 /* This is the root quote depth (no quoting), i.e. it's leftmost */
 .plaintext-ff {

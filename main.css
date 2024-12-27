@@ -150,6 +150,7 @@ body {
 .folder-hover { background-color: #d7c6b1; }
 .messagelist-recent { background-color: #f9aeae; }
 .messagelist-selected { background-color: #deecfe; }
+.messagelist-deleted { text-decoration: line-through; }
 .foldername, .foldercount, .foldersize { display: table-cell; padding: 1px 3px; }
 .foldercount, .foldersize, .message-size { text-align: right; }
 #messagepages { text-align: center; }
