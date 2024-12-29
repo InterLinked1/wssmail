@@ -1618,8 +1618,16 @@ function formatShortEmail(email) {
 	if (email.length > 23) {
 		var arrpos = email.indexOf('<');
 		if (arrpos !== -1) {
-			/* Include only the name if it's too long */
-			email = email.substring(0, arrpos - 1); /* There is a space between name and <, don't include it */
+			/* Include only the name if it's too long, but only if there is a name */
+			if (arrpos > 0) {
+				email = email.substring(0, arrpos - 1); /* There is a space between name and <, don't include it */
+				/* If the name is quoted, strip the quotes. */
+				if (email.charAt(0) === '"') {
+					email = email.substring(1, email.length - 1);
+				}
+			} else {
+				email = email.substring(1, email.length - 1); /* It's just an email address, in <>. Strip those. */
+			}
 		}
 	}
 	return email;
