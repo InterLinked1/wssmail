@@ -1733,9 +1733,25 @@ function notifyNewMessage(msg) {
 	console.debug("Dispatched notification");
 }
 
+function mailboxNamesEqual(s1, s2) {
+	/* In IMAP, mailbox names are case-sensitive...
+	 * (even though most server implementations are case-insensitive, we can't assume that) */
+	if (s1 === s2) {
+		return true;
+	}
+	/* ... except for INBOX (RFC 3501 5.1)
+	 * We do case-insensitive matches for INBOX, as well as any subfolder named "INBOX". */
+	var s1_upper = s1.toUpperCase();
+	var s2_upper = s2.toUpperCase();
+	if (s1_upper == s2_upper) {
+		return s1_upper === "INBOX" || s1_upper.endsWith(".INBOX");
+	}
+	return false;
+}
+
 function getFolder(fname) {
 	for (var name in folders) {
-		if (folders[name].name === fname) {
+		if (mailboxNamesEqual(folders[name].name, fname)) {
 			return folders[name];
 		}
 	}
@@ -1744,7 +1760,7 @@ function getFolder(fname) {
 
 function folderExistsByName(array, name) {
 	for (var i = 0; i < array.length; i++) {
-		if (array[i].name === name) {
+		if (mailboxNamesEqual(array[i].name, name)) {
 			return true;
 		}
 	}
@@ -1782,7 +1798,7 @@ function createDummyFolders(array) {
 
 function moveToFrontByName(array, name) {
 	for (i = 0; i < array.length; i++) {
-		if (array[i].name === name) {
+		if (mailboxNamesEqual(array[i].name, name)) {
 			array.unshift(array.splice(i, 1)[0]);
 		}
 	}
