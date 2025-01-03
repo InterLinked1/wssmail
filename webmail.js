@@ -650,10 +650,12 @@ var firstSelection = true;
 function commandSelectFolder(folder, autoselected) {
 	if (!firstSelection) {
 		setq('page', 1); /* Reset to first page of whatever folder was selected */
+		pageNumber = 1;
 	}
 	var payload = {
 		command: "SELECT",
 		folder: folder,
+		page: parseInt(pageNumber), /* If we reload the page, we should resume using whatever page is in the URL */
 		pagesize: parseInt(pagesize),
 		sort: sortOrder,
 		filter: simpleFilter,
@@ -1313,7 +1315,7 @@ function responseSelectFolder(folderinfo) {
 
 	var index = -1;
 	for (var f = 0; f < folders.length; f++) {
-		if (folders[f].name == folder) {
+		if (mailboxNamesEqual(folders[f].name, folder)) {
 			index = f;
 			break;
 		}
