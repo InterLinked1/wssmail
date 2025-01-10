@@ -474,7 +474,7 @@ function connect() {
 
 function reloadCurrentMessage() {
 	if (currentUID > 0) {
-		commandFetchMessage(currentUID);
+		commandFetchMessage(currentUID, true);
 	}
 }
 
@@ -755,7 +755,7 @@ function unselectAllUIDs() {
 	}
 }
 
-function commandFetchMessage(uid) {
+function commandFetchMessage(uid, markSeen) {
 	if (!(uid > 0)) {
 		console.error("Invalid UID: " + uid);
 		return;
@@ -775,7 +775,8 @@ function commandFetchMessage(uid) {
 		command: "FETCH",
 		uid: parseInt(uid),
 		html: viewHTML,
-		raw: viewRaw
+		raw: viewRaw,
+		markseen: markSeen /* Needs to be provided explicitly, can't always be inferred (e.g. for viewing raw) */
 	}
 	payload = JSON.stringify(payload);
 	ws.send(payload);
@@ -1271,7 +1272,7 @@ function exportMessage() {
 	doingExport = true;
 	var oldRaw = viewRaw;
 	viewRaw = true; /* Get raw source, regardless of current setting */
-	commandFetchMessage(currentUID);
+	commandFetchMessage(currentUID, false); /* Don't automatically mark seen if just downloading it, may not have viewed it */
 	viewRaw = oldRaw; /* Restore */
 }
 
@@ -2550,7 +2551,7 @@ function handleMessage(e) {
 				ahref.setAttribute('uid', jsonData.data[i].uid); /* Store UID in a dummy attribute */
 				ahref.textContent = jsonData.data[i].uid;
 				/* Yes, this is needed, we can't reference this as the arg directly: 8 = length of msg-uid- */
-				ahref.addEventListener('click', function() { commandFetchMessage(this.getAttribute("uid")); }, {passive: true});
+				ahref.addEventListener('click', function() { commandFetchMessage(this.getAttribute("uid"), true); }, {passive: true});
 				/* Prevent left-clicking and middle-clicking since these will just reopen the folder, not open the message. */
 				ahref.addEventListener('contextmenu', function(e) { e.preventDefault(); setError("Please left-click to open a message"); });
 				ahref.addEventListener('auxclick', function(e) { e.preventDefault(); setError("Please left-click to open a message"); });
@@ -2592,7 +2593,7 @@ function handleMessage(e) {
 				ahref.setAttribute('uid', jsonData.data[i].uid); /* Store UID in a dummy attribute */
 				ahref.textContent = listTruncate(jsonData.data[i].subject, maxSubjectLength);
 				/* Yes, this is needed, we can't reference this as the arg directly: 8 = length of msg-uid- */
-				ahref.addEventListener('click', function() { commandFetchMessage(this.getAttribute("uid")); }, {passive: true});
+				ahref.addEventListener('click', function() { commandFetchMessage(this.getAttribute("uid"), true); }, {passive: true});
 				/* Prevent left-clicking and middle-clicking since these will just reopen the folder, not open the message. */
 				ahref.addEventListener('contextmenu', function(e) { e.preventDefault(); setError("Please left-click to open a message"); });
 				ahref.addEventListener('auxclick', function(e) { e.preventDefault(); setError("Please left-click to open a message"); });
