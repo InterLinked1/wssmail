@@ -41,8 +41,27 @@
 	margin-top: 10px;
 	margin-bottom: 7px;
 	padding-left: 12px;
-	border-left: 3px solid gray;
+	border-left-style: solid;
+	border-left-width: 2px;
+	border-left-color: gray;
 	width: inherit;
+}
+/* Same colors as Mozilla clients.
+ * These will override the default border-left-color for plaintext-ff-sub, up through 9 levels of nested quoting */
+.plaintext-quote-depth-1 {
+	border-left-color: #729FCF;
+}
+.plaintext-quote-depth-2 {
+	border-left-color: #AD7FA8;
+}
+.plaintext-quote-depth-3 {
+	border-left-color: #8AE234;
+}
+.plaintext-quote-depth-4 {
+	border-left-color: #FCAF3E;
+}
+.plaintext-quote-depth-5, .plaintext-quote-depth-6, .plaintext-quote-depth-7, .plaintext-quote-depth-8, .plaintext-quote-depth-9 {
+	border-left-color: #E9B96E;
 }
 
 #html-body iframe {

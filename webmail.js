@@ -1586,7 +1586,7 @@ function displayFormatFlowed(body, flowed) {
 			/* There has been a change in the quote depth! */
 			if (thisquotedepth > quotedepth) {
 				/* One level deeper */
-				f += "<div class='plaintext-ff-sub'>" + b;
+				f += "<div class='plaintext-ff-sub plaintext-quote-depth-" + thisquotedepth + "'>" + b;
 			} else {
 				/* Finalize current segment */
 				f += "</div>" + b;
