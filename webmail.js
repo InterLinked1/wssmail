@@ -36,6 +36,7 @@ var doingExport = false;
 
 /* For replies */
 var lastfrom = null;
+var lastreplyto = null;
 var lastto = null;
 var lastcc = null;
 var lastsubject = null;
@@ -926,26 +927,55 @@ function doReply(replyto, replycc) {
 	editor("Reply", from, replyto, replycc, replysubject, replybody, lastmsgid, lastreferences);
 }
 
+function replyHelper(isReplyAll) {
+	/* XXX Find the official/standard algorithm for determining to whom to reply and use that (is that even a thing???)
+	 *
+	 * Convert the array to strings, but if one of the "To" or "Cc" recipients is same as our outgoing From address, or any of our identities, skip it.
+	 * Also, in addition to sender, include all the original To recipients, except for ourself, if we are one. */
+
+	var reply_to = "";
+	if (lastreplyto.length > 0) {
+		/* If explicit Reply-To header was present, use that instead of From */
+		for (var x in lastreplyto) {
+			x = lastreplyto[x];
+			/* Don't skip anything in the Reply-To header, use that explicitly */
+			reply_to += (reply_to === "" ? "" : ", ") + x;
+		}
+	} else {
+		reply_to = lastfrom; /* Start off by initializing to the sender */
+	}
+
+	/* Now, carry over any "To" recipients */
+	for (var x in lastto) {
+		x = lastto[x];
+		if (x.indexOf('"' + document.getElementById('fromaddress').value + '"') === -1) {
+			reply_to += ", " + x;
+		} else {
+			console.debug("Not adding redundant " + x + " to To list");
+		}
+	}
+
+	/* Finally, do the "Cc" */
+	var reply_cc = "";
+	if (isReplyAll) {
+		for (var x in lastcc) {
+			x = lastcc[x];
+			if (x.indexOf('"' + document.getElementById('fromaddress').value + '"') === -1) {
+				reply_cc += (reply_cc === "" ? "" : ", ") + x;
+			} else {
+				console.debug("Not adding redundant " + x + " to Cc list");
+			}
+		}
+	}
+	doReply(reply_to, reply_cc);
+}
+
 function reply(to, cc) {
-	doReply(lastfrom, '');
+	replyHelper(false);
 }
 
 function replyAll() {
-	/* Include the Cc.
-	 * Also, in addition to sender, include all the original To recipients, except for ourself, if we are one. */
-	allfrom = lastfrom;
-	var addresses = lastto.split(',');
-	for (var x in addresses) {
-		x = addresses[x];
-		/* XXX If one of the "To" or "Cc" recipients is same as our outgoing From address, or any of our identities, skip it. */
-		/* XXX Should also do for Cc? */
-		if (x.indexof('"' + document.getElementById('fromaddress').value + '"') === -1) {
-			allfrom += ", " + x;
-		} else {
-			console.debug("Not adding " + x + " to recipient list again");
-		}
-	}
-	doReply(allfrom, lastcc);
+	replyHelper(true);
 }
 
 function forward() {
@@ -2264,6 +2294,7 @@ function handleMessage(e) {
 			var msg = "";
 
 			lastfrom = jsonData.from;
+			lastreplyto = jsonData.replyto;
 			lastto = jsonData.to;
 			lastcc = jsonData.cc;
 			lastsubject = jsonData.subject;
