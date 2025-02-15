@@ -1595,18 +1595,23 @@ function displayFormatFlowed(body, flowed) {
 			b += "\r\n";
 		}
 		if (thisquotedepth != quotedepth) {
-			/* There has been a change in the quote depth! */
+			var curdepth = quotedepth; /* We start out on the screen where we last were */
+			/* There has been a change in the quote depth! It may have been by more than just 1 at a time, too. */
 			if (thisquotedepth > quotedepth) {
-				/* One level deeper */
-				f += "<div class='plaintext-ff-sub plaintext-quote-depth-" + thisquotedepth + "'>" + b;
+				/* One (or more) level deeper */
+				while (curdepth < thisquotedepth) {
+					++curdepth;
+					f += "<div class='plaintext-ff-sub plaintext-quote-depth-" + curdepth + "'>";
+				}
 			} else {
-				/* Finalize current segment */
-				f += "</div>" + b;
+				/* Finalize segments */
+				while (curdepth > thisquotedepth) {
+					--curdepth;
+					f += "</div>";
+				}
 			}
-		} else {
-			/* Append to existing segment */
-			f += b;
-		}
+		} /* else, we append to existing segment */
+		f += b;
 		quotedepth = thisquotedepth;
 	}
 	/* Finalize current segment, if any */
