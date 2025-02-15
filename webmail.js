@@ -484,6 +484,18 @@ function setPreviewPaneHeight(height) {
 	console.debug("Preview pane height now: " + height);
 }
 
+function calculatePreviewPaneHeight() {
+	/* Can't get it to work without JS, yuck */ 
+	var newheight = document.getElementById('messages').clientHeight - document.getElementById('messagelist').clientHeight;
+	if (newheight < 1) {
+		newheight = 0;
+	}
+	if (newheight < 50) {
+		setError("Preview pane too small to display. Reduce the page size to increase preview pane height.");
+	}
+	setPreviewPaneHeight(newheight);
+}
+
 function togglePreview(elem) {
 	viewPreview = elem.checked;
 	document.getElementById("option-preview").checked = viewPreview;
@@ -2401,15 +2413,7 @@ function handleMessage(e) {
 				} else {
 					document.getElementById("previewpane").classList.remove("plaintext");
 				}
-				/* Can't get it to work without JS, yuck */ 
-				var newheight = document.getElementById('messages').clientHeight - document.getElementById('messagelist').clientHeight;
-				if (newheight < 1) {
-					newheight = 0;
-				}
-				if (newheight < 50) {
-					setError("Preview pane too small to display. Reduce the page size to increase preview pane height.");
-				}
-				setPreviewPaneHeight(newheight);
+				calculatePreviewPaneHeight();
 			}
 
 			if (htmlframe) {
@@ -2472,39 +2476,51 @@ function handleMessage(e) {
 
 			/* Display the message as seen in the message list */
 			implicitSeenUnseen(getSelectedUIDs(), true);
-		} else if (response === "EXISTS") {
+		} else if (response === "RECENT") {
 			/* FETCHLIST due to EXISTS will not update folder counts,
 			 * since we can do it ourselves.
 			 * If an EXPUNGE occurs, then the server will tell us the new counts. */
 
-			/* XXX
-			 * There is a big problem here. Just because we got an EXISTS, doesn't mean the message is unseen!
+			/* Note: Just because we got an EXISTS, doesn't mean the message is unseen!
 			 * It could be a new message, but it could be a message that somebody copied here for some other reason.
 			 * In the latter case, we should really NOT notify the user about this being a "new" message,
 			 * and we shouldn't increment the unseen count.
-			 * The server should send an untagged RECENT, if it actually is brand new, though I don't
-			 * think this info is passed by mod_webmail to us currently.
 			 *
 			 * Since we need the flags to determine if this is new or not,
 			 * not sure what a good way to infer this is; for now, we just assume it's new, since that's the common case,
 			 * but technically this is wrong. */
-			adjustFolderCount(selectedFolder, 1, 1);
+			if (jsonData.flags && jsonData.flags.includes("\\Seen")) {
+				/* It's a new message, but it's already \Seen.
+				 * For example, a \Seen message that was in another folder,
+				 * and then moved/copied to this one.
+				 * Don't increment the unseen count. */
+				adjustFolderCount(selectedFolder, 1, 0);
+			} else {
+				adjustFolderCount(selectedFolder, 1, 1);
+			}
 			notifyNewMessage(jsonData);
 		} else if (response === "FETCHLIST") {
 			/* When loading a page of messages, preview pane is empty so make it 0 height to start.
 			 * This avoids it "spilling off the page" if it was previously used and still has old height,
 			 * and we increase the # of messages to show per page in FETCHLIST.
-			 * The FETCH response handling will set the preview pane height if it is needed. */
-			setPreviewPaneHeight(0);
-			lastCheckedSeqno = null;
-			allSelected = false;
-			if (jsonData.cause === "IDLE" || jsonData.cause === "EXISTS" || jsonData.cause === "EXPUNGE") {
-				/* Don't mess with the preview pane. */
-				/* Just refresh the message list for now. We'll get an EXISTS response
+			 * The FETCH response handling will set the preview pane height if it is needed.
+			 *
+			 * However, if a FETCHLIST occured due to an IDLE/NOTIFY update, then we should not
+			 * close the preview pane automatically, though we may need to adjust the height in case
+			 * the new message list takes up a different amount of space. */
+			var idle_refresh = jsonData.cause === "IDLE" || jsonData.cause === "RECENT" || jsonData.cause === "EXISTS" || jsonData.cause === "EXPUNGE";
+			if (currentUID > 0 && idle_refresh) {
+				/* Don't mess with the preview pane, apart from adjustign the size. */
+				/* Just refresh the message list for now. We'll get an RECENT response
 				 * in a second that contains the details of the new message for displaying a notification. */
+				calculatePreviewPaneHeight();
 			} else {
 				endMessagePreview(); /* Stop preview of old message */
+				setPreviewPaneHeight(0);
 			}
+			lastCheckedSeqno = null;
+			allSelected = false;
+
 			/* First, clear any existing */
 			document.getElementById('messagetable').innerHTML = ''; 
 			var tr = document.createElement('tr');
