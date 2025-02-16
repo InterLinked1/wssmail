@@ -946,6 +946,8 @@ function replyHelper(isReplyAll) {
 	 * Also, in addition to sender, include all the original To recipients, except for ourself, if we are one. */
 
 	var reply_to = "";
+	var reply_cc = "";
+
 	if (lastreplyto.length > 0) {
 		/* If explicit Reply-To header was present, use that instead of From */
 		for (var x in lastreplyto) {
@@ -957,22 +959,22 @@ function replyHelper(isReplyAll) {
 		reply_to = lastfrom; /* Start off by initializing to the sender */
 	}
 
-	/* Now, carry over any "To" recipients */
-	for (var x in lastto) {
-		x = lastto[x];
-		if (x.indexOf('"' + document.getElementById('fromaddress').value + '"') === -1) {
-			reply_to += ", " + x;
-		} else {
-			console.debug("Not adding redundant " + x + " to To list");
-		}
-	}
-
-	/* Finally, do the "Cc" */
-	var reply_cc = "";
 	if (isReplyAll) {
+		/* Now, carry over any "To" recipients */
+		for (var x in lastto) {
+			x = lastto[x];
+			/* Even for reply all, if From and To are the same, don't add the address a second time */
+			if (x !== reply_to && x.indexOf('"' + document.getElementById('fromaddress').value + '"') === -1) {
+				reply_to += ", " + x;
+			} else {
+				console.debug("Not adding redundant " + x + " to To list");
+			}
+		}
+
+		/* Finally, do the "Cc" */
 		for (var x in lastcc) {
 			x = lastcc[x];
-			if (x.indexOf('"' + document.getElementById('fromaddress').value + '"') === -1) {
+			if (x !== reply_to && x.indexOf('"' + document.getElementById('fromaddress').value + '"') === -1) {
 				reply_cc += (reply_cc === "" ? "" : ", ") + x;
 			} else {
 				console.debug("Not adding redundant " + x + " to Cc list");
@@ -2718,6 +2720,10 @@ function handleMessage(e) {
 				var f = getFolder(selectedFolder);
 				f.messages = jsonData.messages;
 				f.unseen = jsonData.unseen;
+				if (jsonData.size !== undefined) {
+					/* A gift! The backend told us the current size of the mailbox after whatever just happened. */
+					f.size = jsonData.size;
+				}
 				updateFolderCount(f);
 			}
 
