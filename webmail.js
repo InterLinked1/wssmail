@@ -7,6 +7,7 @@ var ws = null;
 
 var ever_session_connected = false;
 var session_connected = false;
+var suspendFatalErrors = false;
 
 var checkedNotifyPerm = false;
 
@@ -314,6 +315,7 @@ async function newSession(e, tgt) {
 }
 
 async function authenticate(e) {
+	suspendFatalErrors = false; /* If we previously disconnected, show fatal errors going forward */
 	/* If we elected to remember connection info, we need to POST
 	 * to the server first (as usual) so we can get the cookie. */
 	if (document.getElementById('loginlimit').value > 0) {
@@ -1505,6 +1507,13 @@ function setNotification(msg) {
 }
 
 function setFatalError(msg) {
+	if (suspendFatalErrors) {
+		/* If a fatal error was sent by the backend,
+		 * do not override it with a generic failure message about disconnection,
+		 * at least until suspendFatalErrors is cleared. */
+		return;
+	}
+	suspendFatalErrors = true;
 	setErrorFull(msg, 1);
 }
 
