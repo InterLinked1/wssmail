@@ -1921,7 +1921,7 @@ function displayFolderName(folder) {
 	} else if (folder.flags.indexOf("Archive") !== -1) {
 		name = "<span class='folder-icon'>&#128188;</span> " + name;
 	} else {
-		name = "<span class='folder-icon'>&#x1F5C0;</span> " + name;
+		name = "<span class='folder-icon'>&#128193;</span> " + name;
 	}
 	folder.prefix = prefix;
 	return name;
