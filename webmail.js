@@ -2662,6 +2662,7 @@ function handleMessage(e) {
 				ahref.addEventListener('auxclick', function(e) { e.preventDefault(); setError("Please left-click to open a message"); });
 
 				td = document.createElement('td');
+				td.classList.add('message-subject');
 				td.appendChild(ahref);
 				tr.appendChild(td);
 

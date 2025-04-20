@@ -119,6 +119,10 @@ body {
 #messagetable td {
 	padding-right: 8px;
 }
+#messagetable .message-subject {
+	padding-left: 15px;
+	padding-right: 10px;
+}
 #previewpane {
 	border-bottom: 1px solid black;
 	border-top: 2px solid black;
