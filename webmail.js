@@ -2165,6 +2165,11 @@ function addColumnHeading(tr, name) {
 	tr.appendChild(th);
 }
 
+function hideColumn(colNum) {
+	document.querySelectorAll('#messagetable tr th:nth-child(' + colNum + ')').forEach(x => x.style.display = 'none');
+	document.querySelectorAll('#messagetable tr td:nth-child(' + colNum + ')').forEach(x => x.style.display = 'none');
+}
+
 function handleMessage(e) {
 	var jsonData = JSON.parse(e.data);
 	console.log(jsonData);
@@ -2569,6 +2574,8 @@ function handleMessage(e) {
 			var w = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
 			var maxSubjectLength = 45 + (w > 1000 ? (w > 1500 ? 60 : 30) : 0);
 
+			var anyAttachments = anyFlagged = anyDeleted = anyPriority = anyAnswered = anyForwarded = false;
+
 			/* Construct message list table */
 			setQuota(jsonData.quota, jsonData.quotaused);
 			var epoch = Date.now();
@@ -2626,28 +2633,34 @@ function handleMessage(e) {
 				td = document.createElement('td');
 				if (jsonData.data[i].attachments !== undefined && jsonData.data[i].attachments) {
 					td.innerHTML = "&#x1F4CE;";
+					anyAttachments = true;
 				}
 				tr.appendChild(td);
 
 				td = document.createElement('td');
 				td.innerHTML = flags.includes("\\Flagged") ? "&#9873;" : "";
+				anyFlagged = anyFlagged ? anyFlagged : td.innerHTML !== "";
 				tr.appendChild(td);
 
 				td = document.createElement('td');
 				td.innerHTML = flags.includes("\\Deleted") ? "&#128465;" : "";
+				anyDeleted = anyDeleted ? anyDeleted : td.innerHTML !== "";
 				tr.appendChild(td);
 
 				td = document.createElement('td');
 				var priority = jsonData.data[i].priority;
 				td.innerHTML = (priority > 0 ? priority < 3 ? "<span class='priority-high'>!</span>" : priority > 3 ? "<span class='priority-low'>&darr;</span>" : "" : "")
+				anyPriority = anyPriority ? anyPriority : td.innerHTML !== "";
 				tr.appendChild(td);
 
 				td = document.createElement('td');
 				td.innerHTML = flags.includes("\\Answered") ? "<span class='msg-answered'>&larr;</span>" : "";
+				anyAnswered = anyAnswered ? anyAnswered : td.innerHTML !== "";
 				tr.appendChild(td);
 
 				td = document.createElement('td');
 				td.innerHTML = flags.includes("$Forwarded") ? "<span class='msg-forwarded'>&rarr;</span>" : "";
+				anyForwarded = anyForwarded ? anyForwarded : td.innerHTML !== "";
 				tr.appendChild(td);
 
 				ahref = document.createElement('a');
@@ -2706,6 +2719,26 @@ function handleMessage(e) {
 				tr.appendChild(td);
 
 				document.getElementById('messagetable').appendChild(tr);
+			}
+
+			/* Hide any columns that we aren't using, to make room for other stuff */
+			if (!anyAttachments) {
+				hideColumn(4);
+			}
+			if (!anyFlagged) {
+				hideColumn(5);
+			}
+			if (!anyDeleted) {
+				hideColumn(6);
+			}
+			if (!anyPriority) {
+				hideColumn(7);
+			}
+			if (!anyAnswered) {
+				hideColumn(8);
+			}
+			if (!anyForwarded) {
+				hideColumn(9);
 			}
 
 			/* Update folder counts if needed */
