@@ -714,6 +714,19 @@ function commandFetchList(page) {
 	ws.send(payload);
 }
 
+function anyMessagesSelected() {
+	if (allSelected) {
+		return true;
+	}
+	var checkboxes = document.getElementsByName('msg-sel-uid');
+	for (var checkbox of checkboxes) {
+		if (checkbox.checked) {
+			return true;
+		}
+	}
+	return false;
+}
+
 function getSelectedUIDs() {
 	if (allSelected) {
 		return "1:*";
@@ -2005,6 +2018,16 @@ var lastCheckedIndex = null;
 
 function selectAllClick(e, obj) {
 	console.log(obj.checked);
+
+	/* If any of the individual checkboxes are already checked,
+	 * treat this as a request to uncheck all those and leave 'select all' unchecked. */
+	if (anyMessagesSelected()) {
+		unselectAllUIDs();
+		allSelected = false;
+		obj.checked = false;
+		return;
+	}
+
 	/* If the selection checkbox is checked, unselect everything.
 	 * The condition here is a bit counterintuitive, since
 	 * we want to unselect everything if the checkbox is already checked.
