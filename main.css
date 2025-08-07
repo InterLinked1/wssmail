@@ -74,14 +74,14 @@ body {
 }
 #folders {
 	height: 100%;
-	width: 260px;
+	width: 260px; /* Must be in sync with calculation in #messages */
 	overflow: auto;
 	background-color: tan;
 	float: left;
 	/* padding-left: 5px; - nope, this shifts the message list UNDERNEATH */
 }
 #messages {
-	width: calc(100% - 250px);
+	width: calc(100% - 260px);
 	height: inherit;
 	float: left;
 	overflow: none;
