@@ -1,3 +1,5 @@
 body, input, select { font-family: 'Segoe UI', sans-serif; }
 .error { color: #330000; font-weight: 600; }
 .default-hidden { display: none !important; }
+.dark-messages { color: #fff; }
+.dark-messages, .dark-messages > * { background-color: #3A434B !important; } /* !important is needed to fill in the gaps */

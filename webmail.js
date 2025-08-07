@@ -582,6 +582,11 @@ function processSettings() {
 		//document.getElementById('option-extreq').value = "Ext Content";
 		//document.getElementById('btn-download').value = "Download";
 	}
+	if (getBoolSetting("darkmode")) {
+		document.getElementById('messages').classList.add("dark-messages");
+	} else {
+		document.getElementById('messages').classList.remove("dark-messages");
+	}
 }
 
 function folderLevel(folder) {
