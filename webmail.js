@@ -1295,6 +1295,7 @@ function copy() {
 }
 
 function moveTo(newfolder) {
+	clearStatus();
 	var selected = getSelectedUIDs();
 	if (selected.length < 1) {
 		setError("No messages currently selected!");
@@ -1312,6 +1313,7 @@ function moveTo(newfolder) {
 }
 
 function copyTo(newfolder) {
+	clearStatus();
 	var selected = getSelectedUIDs();
 	if (selected.length < 1) {
 		setError("No messages currently selected!");
@@ -2328,6 +2330,7 @@ function handleMessage(e) {
 				drawFolderMenu(); /* Redraw folder list */
 			}
 		} else if (response === "SELECT") {
+			clearStatus(); /* If there was any previous status message, clear it when we select a new folder since it's probably stale */
 			/* If we reload, and a particular page was selected, we should retain that.
 			 * However, we should reset to 1 whenever we successfully move to a new folder. */
 			if (!firstSelection) {
@@ -2336,9 +2339,7 @@ function handleMessage(e) {
 			firstSelection = false;
 			responseSelectFolder(jsonData);
 		} else if (response === "FETCH") {
-			if (viewRaw) {
-				clearStatus(); /* Get rid of "Downloading, please wait..." status message */
-			}
+			clearStatus(); /* e.g., for raw messages, get rid of "Downloading, please wait..." status message */
 			if (doingExport) {
 				doingExport = false;
 				/* Download the message */
