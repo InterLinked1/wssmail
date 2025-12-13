@@ -2382,7 +2382,11 @@ function handleMessage(e) {
 			var htmlframe = false;
 
 			if (!viewRaw && jsonData.contenttype !== undefined && jsonData.contenttype.length > 0 && jsonData.contenttype.indexOf("text/plain") !== -1) {
-				if (jsonData.contenttype.indexOf("format=flowed") !== -1) {
+				if (body === undefined) {
+					/* Plain text part available, but it's empty */
+					console.debug("Empty plain text part");
+					msg += "<div class='msg-body'>" + "<b><i>The plain text part in this message is empty; an HTML version may be available.</i></b>" + "</div>";
+				} else if (jsonData.contenttype.indexOf("format=flowed") !== -1) {
 					console.debug("Plain text flowed display");
 					msg += "<div class='msg-body'>" + displayFormatFlowed(body, 1) + "</div>";
 				} else {
@@ -2394,10 +2398,14 @@ function handleMessage(e) {
 				/* Use an iframe to display arbitrary HTML "safely" */
 				msg += "<div id='html-body' class='msg-body html-body'></div>";
 				htmlframe = true;
-			} else {
+			} else if (body !== undefined) {
 				/* Fallback to display plain text anyways */
 				console.debug("Fallback display");
 				msg += "<div class='msg-body'><div class='plaintext-ff'>" + escapeHTML(body) + "</div></div>";
+			} else {
+				console.debug("No plain text version available");
+				/* No plain text part available, only HTML (possibly) */
+				msg += "<div class='msg-body'><div class='plaintext-ff'>" + "<b><i>This message does not contain a plain text part; an HTML version may be available.</i></b>" + "</div></div>";
 			}
 			if (jsonData.attachments.length > 0) {
 				msg + "<div class='msg-attachments'>";
