@@ -387,11 +387,11 @@ function connect() {
 		var q;
 		q = searchParams.get("page");
 		if (q !== undefined && q !== null) {
-			pageNumber = q;
+			pageNumber = Number(q);
 		}
 		q = searchParams.get("pagesize");
 		if (q !== undefined && q !== null) {
-			pagesize = q;
+			pagesize = Number(q);
 		}
 		document.getElementById('option-pagesize').selectedIndex = Math.ceil(pagesize / 5) - 1;
 
@@ -705,7 +705,7 @@ function getq(param) {
 }
 
 function commandFetchList(page) {
-	pageNumber = page;
+	pageNumber = Number(page);
 	setq('page', pageNumber);
 	var payload = {
 		command: "FETCHLIST",
