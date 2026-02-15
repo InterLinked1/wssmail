@@ -58,10 +58,20 @@ The frontend requires the PHP `imap` and `openssl` extensions for SMTP. Please m
 
 ```
 apt-get install php-imap php-mbstring
-a2enmod rewrite
-a2enmod proxy
-a2enmod proxy_wstunnel
+a2enmod rewrite proxy proxy_wstunnel
 service apache2 restart
+```
+
+`php-imap` was removed in PHP 8.4, so if you were using a recent version of PHP, the package may be "unavailable". You can work around this by using the sury repository, e.g.:
+
+```
+# Install using the sury repo for Debian packages that still support php-imap (removed in PHP 8.4)
+apt-get install -y curl
+curl -sSLo /tmp/php.sh https://packages.sury.org/php/README.txt && sh /tmp/php.sh && rm /tmp/php.sh
+
+# Install required packages
+apt-get install -y apache2 php8.5 php8.5-{common,mbstring,imap}
+a2enmod php8.5 rewrite proxy proxy_wstunnel
 ```
 
 To install the frontend, you will need Composer. Once you have cloned this repository into the web directory where it will be hosted, run:
