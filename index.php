@@ -561,9 +561,9 @@ startHTML();
 						<div>
 							<input type="radio" id="smtp-security-plain" name="smtpsecurity" value="none" <?php echo !isset($webMailCookie['smtpsecurity']) || $webMailCookie['smtpsecurity'] === "none" ? 'checked' : '';?>/>
 							<label for="smtp-security-plain">None</label>
-							<input type="radio" id="smtp-security-starttls" name="smtpsecurity" value="starttls"" <?php echo isset($webMailCookie['security']) && $webMailCookie['security'] === "starttls" ? 'checked' : '';?>/>
+							<input type="radio" id="smtp-security-starttls" name="smtpsecurity" value="starttls"" <?php echo isset($webMailCookie['smtpsecurity']) && $webMailCookie['smtpsecurity'] === "starttls" ? 'checked' : '';?>/>
 							<label for="smtp-security-starttls">STARTTLS</label>
-							<input type="radio" id="smtp-security-tls" name="smtpsecurity" value="tls"" <?php echo isset($webMailCookie['security']) && $webMailCookie['security'] === "tls" ? 'checked' : '';?>/>
+							<input type="radio" id="smtp-security-tls" name="smtpsecurity" value="tls"" <?php echo isset($webMailCookie['smtpsecurity']) && $webMailCookie['smtpsecurity'] === "tls" ? 'checked' : '';?>/>
 							<label for="smtp-security-tls">TLS</label>
 						</div>
 					</div>
