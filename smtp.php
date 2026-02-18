@@ -4,6 +4,8 @@ use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;
 use PHPMailer\PHPMailer\Exception;
 
+$smtpErrorMsg = ""; /* Global variable */
+
 function addAddresses($mail, $header, $s) {
 	$addresses = explode(',', $s); /* XXX ideally, delimit on either , or ; - but the RFC says , is the right one */
 	foreach ($addresses as $address) {
@@ -60,6 +62,7 @@ function generateUUID() {
 
 function send_message(array $webMailCookie, bool $send) {
 	global $settings;
+
 	$smtpDebug = false; /* Enable for SMTP debugging */
 	$connInfo = "Connecting to ";
 	$progname = "wssmail";
@@ -241,9 +244,6 @@ function send_message(array $webMailCookie, bool $send) {
 		}
 		$mail->addCustomHeader("User-Agent", "$progname $progver (PHP)");
 		$mail->Body = $_POST['body'];
-		/*! \todo XXX need to send format=flowed !!! */
-		//$mail->CharSet = "ISO-8859-1";
-		//$mail->addCustomHeader("Content-Type", "text/plain; charset=UTF-8; format=flowed");
 
 		/* Attach attachments */
 		$numAttachments = count($_FILES['attachments']['name']);
@@ -254,8 +254,42 @@ function send_message(array $webMailCookie, bool $send) {
 		}
 
 		if ($send) {
+			if (!$smtpDebug) {
+				/* If debug is enabled, then we'll let it get dumped to the page.
+				 * Otherwise, we can intercept it. */
+				$mail->Debugoutput = function($str, $level) {
+					/* Errors only come from the server, ignore everything else */
+					if (str_starts_with($str, "SERVER -> CLIENT:")) {
+						/* We don't care about 2xx level messages as these usually indicate success,
+						 * and the last 2xx message in particular (221 2.0.0 Closing Connection)
+						 * would overwrite the actual error that occured. */
+						if (!str_starts_with($str, "SERVER -> CLIENT: 2")) {
+							/* Skip "SERVER -> CLIENT: " when saving */
+							$GLOBALS['smtpErrorMsg'] = trim(substr($str, 18));
+						}
+					}
+				};
+				$mail->SMTPDebug = 3;
+			}
 			if (!$mail->send()) {
-				return $connInfo . "<br>" . $mail->ErrorInfo;
+				/* PHPMailer does not make it easy to get the actual error that occured!
+				 *
+				 * $mail->ErrorInfo is useless, it's usually just "SMTP connect() failed. https://github.com/PHPMailer/PHPMailer/Troubleshooting",
+				 * even though that may not be accurate. Either way, completely useless.
+				 *
+				 * You would think that $mail->getSMTPInstance()->getLastReply() might do this,
+				 * but at this point, the "last reply" is likely 221 2.0.0 Closing Connection.
+				 * It's the reply *before* that in which we are interested (likely a 5xx error).
+				 *
+				 * $mail->getSMTPInstance()->getError() also looks promising... but it's empty.
+				 *
+				 * The convoluted workaround is to collect all data sent/received to a debug callback,
+				 * and filter out what we need from that. */
+				if ($smtpDebug) {
+					return $connInfo;
+				} else {
+					return $connInfo . "<br>Error: " . $GLOBALS['smtpErrorMsg'];
+				}
 			}
 		} else {
 			$mail->preSend();
