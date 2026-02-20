@@ -62,7 +62,7 @@ a2enmod rewrite proxy proxy_wstunnel
 service apache2 restart
 ```
 
-`php-imap` was removed in PHP 8.4, so if you were using a recent version of PHP, the package may be "unavailable". You can work around this by using the sury repository, e.g.:
+`php-imap` was removed in PHP 8.4, so if you were using a recent version of Debian/PHP, the package may be "unavailable". You can work around this by using the sury repository, e.g.:
 
 ```
 # Install using the sury repo for Debian packages that still support php-imap (removed in PHP 8.4)
@@ -91,6 +91,13 @@ Basic configuration of your frontend web server is required for the frontend sit
 RewriteEngine On
 RewriteCond %{HTTP:Upgrade} =websocket [NC]
 RewriteRule /(.*)           ws://localhost:8143/webmail [P,L]
+```
+
+To establish an encrypted connection (e.g. to another server), you can use:
+
+```
+SSLProxyEngine On
+ProxyPass "/webmail" "wss://example.com:8443/webmail" upgrade=websocket
 ```
 
 * Run the frontend and backend on separate servers, and reverse proxy WebSocket connections to the backend server. The Apache HTTP configuration would be as the previous one, with localhost substituted for the backend server. One reason to prefer this over the first optio (directly specifying the backend WebSocket connection details in the configuration) is the WebSocket server wouldn't be required to use TLS, since this will be offloaded to the Apache WebSocket connection before it's reverse-proxied.

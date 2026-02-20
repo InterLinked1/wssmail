@@ -405,13 +405,14 @@ if (isset($webMailCookie['smtpserver']) && $sendMessage) {
 	if (!isset($_SESSION['bauth'])) {
 		/* Initialize */
 		$_SESSION['bauth']['smtpsuccess'] = false; /* No message has been sent successfully yet. */
-		$_SESSION['bauth']['realm'] = "wssmail SMTP";
 		$_SESSION['bauth']['reprompt'] = 0;
+		$_SESSION['bauth']['realm'] = "wssmail SMTP";
 	}
 	if (!isset($_SERVER['PHP_AUTH_PW']) || $_SESSION['bauth']['reprompt'] == 2) {
 		$_SESSION['bauth']['reprompt'] = 0; /* Reset */
-		header("WWW-Authenticate: Basic realm=\"" . $_SESSION['bauth']['realm'] . "\"");
+		$_SESSION['bauth']['realm'] = "wssmail SMTP";
 		header("HTTP/1.1 401 Unauthorized");
+		header("WWW-Authenticate: Basic realm=\"" . $_SESSION['bauth']['realm'] . "\"");
 		$ret = "Failed to send message: No password is available for SMTP authentication.";
 	} else {
 		/* Send a message via SMTP, and upload it via IMAP APPEND. Quite another ballgame. */
@@ -433,8 +434,15 @@ if (isset($webMailCookie['smtpserver']) && $sendMessage) {
 			 * which is why we count to 2 before reprompting; this ensures
 			 * the first attempt goes through no matter what and another
 			 * attempt will cause a reauth.
+			 *
+			 * Note that Chromium-based browsers (including Chrome itself)
+			 * exhibit strange behavior with seemingly randomly changing realms.
+			 * Doing what we do here is fine, but if prior to send_message,
+			 * we were to repeatedly 401 with a realm ending in rand() or time(),
+			 * Chrome will repeatedly send the first Basic Auth credentials received
+			 * over and over. Mozilla-based browsers do not do this and work as expected.
 			 */
-			$_SESSION['bauth']['reprompt'] += 1;
+			$_SESSION['bauth']['reprompt'] += 1; /* Must be += 1, not = 1 */
 			$_SESSION['bauth']['realm'] = "wssmail SMTP " . rand(1, 8192);
 		}
 		/* Failure. Display the form again. */
