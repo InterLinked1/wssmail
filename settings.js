@@ -74,3 +74,4 @@ registerSetting("Display labels in top menu, not icons*", 'force-labels', 'force
 registerSetting("Automark read when deleting/junking a message", 'automark-seen', 'automarkseen', true);
 registerSetting("Autoreconnect upon server/network disconnect", 'autoreconnect', 'autoreconnect', false);
 registerSetting("Dark Mode in message pane", 'darkmode', 'darkmode', false);
+registerSetting("Allow desktop notifications", 'desktopnotifications', 'desktopnotifications', true);

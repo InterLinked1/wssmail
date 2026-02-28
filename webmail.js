@@ -1756,6 +1756,10 @@ function canDisplayNotifications() {
 		console.error("Can't display notification, permission not granted");
 		return false;
 	}
+	if (!getBoolSetting('desktopnotifications')) {
+		console.debug("Desktop notifications disabled, not displaying");
+		return false;
+	}
 	return true;
 }
 
