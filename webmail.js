@@ -599,6 +599,35 @@ function folderLevel(folder) {
 	return level;
 }
 
+function isSubfolderOf(longstr, basestr) {
+	/* It's a subfolder if it starts with the name of the parent folder,
+	 * and the character immediately after the match is the hierarchy delimiter. */
+	return longstr.startsWith(basestr) && longstr.charAt(basestr.length) === hierarchyDelimiter;
+}
+
+function calculateSubfolderSize(folder, noselect) {
+	var subsize = 0;
+	var subcount = 0;
+
+	for (var i = 0; i < folders.length; i++) {
+		if (isSubfolderOf(folders[i].name, folder.name)) {
+			subsize += folders[i].size;
+			subcount += folders[i].messages;
+		}
+	}
+
+	/* Also include itself, if applicable */
+	if (!noselect) {
+		subsize += folder.size;
+		subcount += folder.messages;
+	}
+
+	return {
+		subsize: subsize,
+		subcount: subcount
+	};
+}
+
 function addToFolderMenu(details, searchParams, parent, folder) {
 	var li = document.createElement('li');
 	li.setAttribute('id', 'folder-link-' + folder.name);
@@ -618,8 +647,14 @@ function addToFolderMenu(details, searchParams, parent, folder) {
 		li.innerHTML = "<span class='foldername'>" + prefix + dispname + "</span>";
 	} else {
 		var extraClasses = (folder.unseen > 0 ? " folder-hasunread" : "") + (marked ? " folder-marked" : "");
+		calculateSubfolderSize(folder);
+		var subfolderTitle = "";
+		var subinfo = calculateSubfolderSize(folder, noselect);
+		if (subinfo.subcount > 0) {
+			subfolderTitle = " (" + subinfo.subcount + " msg in tree, " + formatSize(subinfo.subsize, 0) + " total)";
+		}
 		if (noselect) {
-			li.innerHTML = "<span class='foldername" + extraClasses + "'>" + prefix + dispname + "<span class='folderunread'>" + "</span>" + "</span>";
+			li.innerHTML = "<span class='foldername" + extraClasses + " ' title='" + subfolderTitle + "'>" + prefix + dispname + "<span class='folderunread'>" + "</span>" + "</span>";
 		} else {
 			/* Since the link has an event listener (commandSelectFolder),
 			 * we don't need an actual link for the hyperlink and '#' works just fine as a target.
@@ -632,7 +667,7 @@ function addToFolderMenu(details, searchParams, parent, folder) {
 			currentURL.searchParams.set("folder", folder.name); /* Set the folder query param in the link to this folder */
 			var linkURL = currentURL.toString();
 
-			li.innerHTML = "<span class='foldername" + extraClasses + "'>" + prefix + "<a href='" + linkURL + "' title='" + folder.name + "'>" + dispname + "<span class='folderunread'>" + (folder.unseen > 0 ? " (" + folder.unseen + ")" : "") + "</span></a>" + "</span>";
+			li.innerHTML = "<span class='foldername" + extraClasses + "'>" + prefix + "<a href='" + linkURL + "' title='" + folder.name + subfolderTitle + "'>" + dispname + "<span class='folderunread'>" + (folder.unseen > 0 ? " (" + folder.unseen + ")" : "") + "</span></a>" + "</span>";
 			li.innerHTML += ("<span class='foldercount'>" + folder.messages + "</span><span class='foldersize'>" + formatSize(folder.size, 0) + "</span>");
 		}
 	}
