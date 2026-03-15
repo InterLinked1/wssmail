@@ -1916,10 +1916,14 @@ function createDummyFolders(array) {
 	}
 }
 
+function moveToFront(array, i) {
+	array.unshift(array.splice(i, 1)[0]);
+}
+
 function moveToFrontByName(array, name) {
 	for (i = 0; i < array.length; i++) {
 		if (mailboxNamesEqual(array[i].name, name)) {
-			array.unshift(array.splice(i, 1)[0]);
+			moveToFront(array, i);
 		}
 	}
 }
@@ -1934,7 +1938,38 @@ function moveToFrontByFlag(array, flag) {
 			continue;
 		}
 		if (array[i].flags.indexOf(flag) !== -1) {
-			array.unshift(array.splice(i, 1)[0]);
+			moveToFront(array, i);
+		}
+	}
+}
+
+function moveTreeToFrontByName(array, name) {
+	/* The list is already sorted alphabetically, so
+	 * if we want to move an entire tree to the front of the list,
+	 * we want to move the last such item first, so it will end
+	 * up last of the items we end up moving.
+	 *
+	 * However, that does mean we need to avoid increment i when we unshift,
+	 * or we won't actually traverse all the items in the list.
+	 * We use f to ensure we don't end up in a loop. */
+	for (i = array.length - 1, f = 0; i >= 0, f < array.length; i--, f++) {
+		if (mailboxNamesEqual(array[i].name, name)) {
+			moveToFront(array, i);
+			i++;
+		} else if (isSubfolderOf(array[i].name, name)) {
+			moveToFront(array, i);
+			i++;
+		}
+	}
+}
+
+function moveTreeToFrontByFlag(array, flag) {
+	for (i = array.length - 1; i >= 0; i--) {
+		if (array[i].name.indexOf(hierarchyDelimiter) !== -1) {
+			continue;
+		}
+		if (array[i].flags.indexOf(flag) !== -1) {
+			return moveTreeToFrontByName(array, array[i].name);
 		}
 	}
 }
@@ -1946,7 +1981,7 @@ function moveNamespacesToEnd(array) {
 	for (i = 0; i < array.length - spliced; i++) {
 		/* Don't include hierarchy delimiter as this applies to the containers themselves */
 		if (array[i].name.startsWith("Other Users") || array[i].name.startsWith("Shared Folders")) {
-			array.push(array.splice(i, 1)[0]);
+			moveToFront(array, i);
 			spliced++;
 			i--; /* Stay at same index due to splice, or we'll skip one */
 		}
@@ -2295,16 +2330,16 @@ function handleMessage(e) {
 			 * manually detect these folder names and order them as such.
 			 * If it is supported, this won't do any harm (we'll just redo this, basically)	
 			 */
-			moveToFrontByName(folders, "Trash");
-			moveToFrontByName(folders, "Junk");
-			moveToFrontByName(folders, "Archive");
-			moveToFrontByName(folders, "Sent");
-			moveToFrontByName(folders, "Drafts");
+			moveTreeToFrontByName(folders, "Trash");
+			moveTreeToFrontByName(folders, "Junk");
+			moveTreeToFrontByName(folders, "Archive");
+			moveTreeToFrontByName(folders, "Sent");
+			moveTreeToFrontByName(folders, "Drafts");
 			/* RFC 6154 SPECIAL-USE */
-			moveToFrontByFlag(folders, "Trash");
-			moveToFrontByFlag(folders, "Junk");
-			moveToFrontByFlag(folders, "Sent");
-			moveToFrontByFlag(folders, "Drafts");
+			moveTreeToFrontByFlag(folders, "Trash");
+			moveTreeToFrontByFlag(folders, "Junk");
+			moveTreeToFrontByFlag(folders, "Sent");
+			moveTreeToFrontByFlag(folders, "Drafts");
 			/* INBOX at very top */
 			moveToFrontByName(folders, "INBOX");
 
