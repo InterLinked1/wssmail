@@ -1920,6 +1920,10 @@ function moveToFront(array, i) {
 	array.unshift(array.splice(i, 1)[0]);
 }
 
+function moveToEnd(array, i) {
+	array.push(array.splice(i, 1)[0]);
+}
+
 function moveToFrontByName(array, name) {
 	for (i = 0; i < array.length; i++) {
 		if (mailboxNamesEqual(array[i].name, name)) {
@@ -1981,7 +1985,7 @@ function moveNamespacesToEnd(array) {
 	for (i = 0; i < array.length - spliced; i++) {
 		/* Don't include hierarchy delimiter as this applies to the containers themselves */
 		if (array[i].name.startsWith("Other Users") || array[i].name.startsWith("Shared Folders")) {
-			moveToFront(array, i);
+			moveToEnd(array, i);
 			spliced++;
 			i--; /* Stay at same index due to splice, or we'll skip one */
 		}
@@ -2274,6 +2278,21 @@ function hideColumn(colNum) {
 	document.querySelectorAll('#messagetable tr td:nth-child(' + colNum + ')').forEach(x => x.style.display = 'none');
 }
 
+function rankChar(ch) {
+	/* Order folders in the same way that Mozilla would */
+	if (ch === hierarchyDelimiter) {
+		return 0;
+	} else if (ch === ' ') {
+		return 1;
+	} else if (ch >= '0' && ch <= '9') {
+		return 2;
+	} else if (ch >= 'a' && ch <= 'z') { /* If there's a tie, lowercase comes before uppercase */
+		return 3;
+	} else {
+		return 4;
+	}
+}
+
 function handleMessage(e) {
 	var jsonData = JSON.parse(e.data);
 	console.log(jsonData);
@@ -2321,7 +2340,32 @@ function handleMessage(e) {
 
 			/* Sort alphabetically first */
 			folders.sort(function(a, b) {
-				return a.name.localeCompare(b.name);
+				/* We forgo localeCompare() since it is purely case-insensitive,
+				 * and case matters when comparing folders,
+				 * so we implement our own sort callback that will order folders correctly, ensuring
+				 * subfolders show up nested immediately underneath their parent
+				 *
+				 * Sample ordering: apple, Banana, cherry, Tater Tots, test, test.sub, Test Items, Tofu, TV */
+				var A = a.name;
+				var B = b.name;
+				var ablen = Math.min(A.length, B.length);
+				for (var i = 0; i < ablen; i++) {
+					var ca = A[i];
+					var cb = B[i];
+					var la = ca.toLowerCase();
+					var lb = cb.toLowerCase();
+					if (la === lb) { /* case-insensitively identical so far */
+						continue;
+					}
+					var rA = rankChar(la);
+					var rB = rankChar(lb);
+					if (rA !== rB) {
+						/* One of these has precedence, order accordingly */
+						return rA - rB;
+					}
+					return la < lb ? -1 : 1;
+				}
+				return A.length - B.length; /* shorter first */
 			});
 
 			/* In reverse order that we want them to appear */
