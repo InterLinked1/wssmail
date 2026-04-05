@@ -113,7 +113,7 @@ function send_message(array $webMailCookie, bool $send) {
 	}
 	/* comma-delimited */
 	$msg .= "To: $from\r\n";
-	$msg .= "Content-Type: text/plain; format=flowed\r\n";
+	$msg .= "Content-Type: text/plain; charset=utf-8; format=flowed\r\n";
 	$msg .= "User-Agent: $progname $progver (https://github.com/InterLinked1/wssmail)\r\n";
 	$msg .= "\r\n";
 	/* Create a format=flowed plain text body (RFC 3676 - 4.2) */
