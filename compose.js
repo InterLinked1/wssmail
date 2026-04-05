@@ -13,3 +13,11 @@ function sendCheck(e) {
 	}
 }
 document.getElementById('btn-send').addEventListener('click', sendCheck, true);
+
+document.addEventListener('DOMContentLoaded', () => {
+	document.getElementById('from-addr-select').addEventListener("change", (event) => {
+		if (event.target.value === "custom-addr") {
+			document.getElementById('from-addr-picker').innerHTML = "<label for='from'>From</label><input type='text' id='from' name='from'></input>";
+		}
+	});
+});

@@ -889,6 +889,12 @@ function upload() {
 	reader.readAsText(file);
 }
 
+function encodeHTMLEntities(str) {
+	var textArea = document.createElement('textarea');
+	textArea.innerHTML = str;
+	return textArea.innerHTML;
+}
+
 function editor(name, from, to, cc, subject, body, inreplyto, references) {
 	/* Escape any quotes inside attributes */
 	to = to.replace(/'/g, "&#39;");
@@ -898,7 +904,18 @@ function editor(name, from, to, cc, subject, body, inreplyto, references) {
 	childhtml += "<div>";
 	childhtml += "<form id='composer' target='' method='post' enctype='multipart/form-data'>";
 	childhtml += "<div class='form-table'>";
-	childhtml += "<div><label for='from'>From</label><input type='text' id='from' name='from' placeholder='" + document.getElementById('fromaddress').value + "' value='" + from + "'></input></div>";
+	var idents = getArraySetting('identities');
+	if (from.length > 0 || idents.length === 0) {
+		childhtml += "<div id='from-addr-picker'><label for='from'>From</label><input type='text' id='from' name='from' placeholder='" + document.getElementById('fromaddress').value + "' value='" + from + "'></input></div>";
+	} else {
+		/* If no identity could be autodetected, and we have identities configured, provide a dropdown for the user: */
+		childhtml += "<div id='from-addr-picker'><label for='from'>From</label><select id='from-addr-select' name='from'>";
+		for (i = 0; i < idents.length; i++) {
+			childhtml += "<option value='" + encodeHTMLEntities(idents[i]) + "'>" + encodeHTMLEntities(idents[i]) + "</option>";
+		}
+		childhtml += "<option value='custom-addr'>Customize From Address&#133;</option>";
+		childhtml += "</select></div>";
+	}
 	childhtml += "<div><label for='replyto'>Reply To</label><input type='text' id='replyto' name='replyto' placeholder='Same as From'></input></div>";
 	childhtml += "<div><label for='to'>To</label><input type='text' id='to' name='to' value='" + to + "' required></input></div>";
 	childhtml += "<div><label for='cc'>Cc</label><input type='text' id='cc' name='cc' value='" + cc + "'></input></div>";
@@ -942,6 +959,27 @@ function compose() {
 	editor("Compose", document.getElementById('fromaddress').value, '', '', '', '', '', '');
 }
 
+function extractEmailAddress(email) {
+	var addr = email;
+	var tmp = addr.indexOf('<');
+	if (tmp !== -1) { /* Use just the portion in <>, if specified */
+		addr = addr.substring(tmp + 1);
+		tmp = email.indexOf('>');
+		addr = addr.substring(0, tmp);
+	}
+	return addr;
+}
+
+function recipientListContainsIdentity(list, identity) {
+	for (var idx = 0; idx < list.length; idx++) {
+		var recip_email = list[idx];
+		if (recip_email == identity) {
+			return true;
+		}
+	}
+	return false;
+}
+
 function doReply(replyto, replycc) {
 	if (currentUID < 1) {
 		setError("No message is currently selected!");
@@ -971,19 +1009,13 @@ function doReply(replyto, replycc) {
 	var idents = getArraySetting('identities');
 	for (i = 0; i < idents.length; i++) {
 		/* See if any of the identities was any of the recipients of the message to which we're replying. */
-		var email = idents[i];
-		var tmp = email.indexOf('<');
-		if (tmp !== -1) { /* Use just the portion in <>, if specified */
-			email = email.substring(tmp + 1);
-			tmp = email.indexOf('>');
-			email = email.substring(0, tmp);
-		}
-		if (replyto.indexOf(email) !== -1) {
+		var email = extractEmailAddress(idents[i]);
+		/* Check if either the To or Cc headers for the message to which we're replying
+		 * contained any of our identities; if so, use the identity we find.
+		 * Can't just use indexOf here, because for each identity, we need to do a comparison
+		 * using just the email address */
+		if (recipientListContainsIdentity(lastto, idents[i]) || recipientListContainsIdentity(lastcc, idents[i])) {
 			from = idents[i]; /* Use the full identity, not just the email portion (on match) */
-			console.debug("Overriding from identity to " + from);
-			break;
-		} else if (replycc.indexOf(email) !== -1) {
-			from = idents[i];
 			console.debug("Overriding from identity to " + from);
 			break;
 		}
@@ -1002,6 +1034,11 @@ function replyHelper(isReplyAll) {
 
 	var reply_to = "";
 	var reply_cc = "";
+
+	if (lastfrom === null) {
+		setStatus("Select a message first to reply to it");
+		return;
+	}
 
 	if (lastreplyto.length > 0) {
 		/* If explicit Reply-To header was present, use that instead of From */
