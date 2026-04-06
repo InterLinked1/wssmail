@@ -33,3 +33,6 @@
 	min-height: 350px;
 	white-space: pre-wrap;
 }
+#from-addr-current {
+	display: none;
+}

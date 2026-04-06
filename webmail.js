@@ -905,17 +905,30 @@ function editor(name, from, to, cc, subject, body, inreplyto, references) {
 	childhtml += "<form id='composer' target='' method='post' enctype='multipart/form-data'>";
 	childhtml += "<div class='form-table'>";
 	var idents = getArraySetting('identities');
-	if (from.length > 0 || idents.length === 0) {
+	var selectedIdentity = "";
+	if (idents.length === 0) {
+		if (from.length) {
+			selectedIdentity = from;
+		}
 		childhtml += "<div id='from-addr-picker'><label for='from'>From</label><input type='text' id='from' name='from' placeholder='" + document.getElementById('fromaddress').value + "' value='" + from + "'></input></div>";
 	} else {
-		/* If no identity could be autodetected, and we have identities configured, provide a dropdown for the user: */
+		/* If we have identities configured, provide a dropdown for the user: */
 		childhtml += "<div id='from-addr-picker'><label for='from'>From</label><select id='from-addr-select' name='from'>";
+		if (from.length > 0) {
+			/* If we have an identity to use, make it the default one that's selected */
+			childhtml += "<option value='" + encodeHTMLEntities(from) + "'>" + encodeHTMLEntities(from) + "</option>";
+			selectedIdentity = from;
+		}
 		for (i = 0; i < idents.length; i++) {
+			if (!from.length && i == 0) {
+				selectedIdentity = from;
+			}
 			childhtml += "<option value='" + encodeHTMLEntities(idents[i]) + "'>" + encodeHTMLEntities(idents[i]) + "</option>";
 		}
 		childhtml += "<option value='custom-addr'>Customize From Address&#133;</option>";
 		childhtml += "</select></div>";
 	}
+	childhtml += "<div id='from-addr-current'>" + selectedIdentity + "</div>";
 	childhtml += "<div><label for='replyto'>Reply To</label><input type='text' id='replyto' name='replyto' placeholder='Same as From'></input></div>";
 	childhtml += "<div><label for='to'>To</label><input type='text' id='to' name='to' value='" + to + "' required></input></div>";
 	childhtml += "<div><label for='cc'>Cc</label><input type='text' id='cc' name='cc' value='" + cc + "'></input></div>";

@@ -17,7 +17,10 @@ document.getElementById('btn-send').addEventListener('click', sendCheck, true);
 document.addEventListener('DOMContentLoaded', () => {
 	document.getElementById('from-addr-select').addEventListener("change", (event) => {
 		if (event.target.value === "custom-addr") {
-			document.getElementById('from-addr-picker').innerHTML = "<label for='from'>From</label><input type='text' id='from' name='from'></input>";
+			var oldAddress = document.getElementById('from-addr-current').innerText;
+			document.getElementById('from-addr-picker').innerHTML = "<label for='from'>From</label><input type='text' id='from' name='from' value='" + oldAddress + "'></input>";
+		} else {
+			document.getElementById('from-addr-current').innerText = event.target.value;
 		}
 	});
 });
