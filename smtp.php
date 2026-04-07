@@ -214,6 +214,7 @@ function send_message(array $webMailCookie, bool $send) {
 		}
 
 		$mail->isHTML(false);
+		$mail->CharSet = "UTF-8"; /* Default is ISO-8859-1 */
 		$mail->XMailer = ' ';
 		if (strlen($references) > 0) {
 			$mail->addCustomHeader("References", $references);
