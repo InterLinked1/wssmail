@@ -1018,7 +1018,7 @@ function doReply(replyto, replycc) {
 	/* If one of our configured identities was one of the recipients of the message to which we're replying,
 	 * then assume that's us and reply to the message using the same identity.
 	 * This mirrors the identity functionality in Thunderbird-like clients. */
-	var from = '';
+	var from = document.getElementById('fromaddress').value;
 	var idents = getArraySetting('identities');
 	for (i = 0; i < idents.length; i++) {
 		/* See if any of the identities was any of the recipients of the message to which we're replying. */
@@ -1105,7 +1105,7 @@ function forward() {
 	fwdbody += "To: \t" + lastto + "\r\n";
 	fwdbody += "\r\n\r\n\r\n";
 	fwdbody += lastbody;
-	editor("Forward", '', '', '', 'Fwd: ' + lastsubject, fwdbody, lastmsgid, lastreferences);
+	editor("Forward", document.getElementById('fromaddress').value, '', '', 'Fwd: ' + lastsubject, fwdbody, lastmsgid, lastreferences);
 }
 
 function updateFolderCount(f) {
