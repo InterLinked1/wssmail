@@ -1039,6 +1039,18 @@ function doReply(replyto, replycc) {
 	editor("Reply", from, replyto, replycc, replysubject, replybody, lastmsgid, lastreferences);
 }
 
+function recipientIsRedundant(recip) {
+	var email_recip = extractEmailAddress(recip);
+	var idents = getArraySetting('identities');
+	for (i = 0; i < idents.length; i++) {
+		var email = extractEmailAddress(idents[i]);
+		if (email === email_recip) {
+			return true;
+		}
+	}
+	return false;
+}
+
 function replyHelper(isReplyAll) {
 	/* XXX Find the official/standard algorithm for determining to whom to reply and use that (is that even a thing???)
 	 *
@@ -1047,6 +1059,7 @@ function replyHelper(isReplyAll) {
 
 	var reply_to = "";
 	var reply_cc = "";
+	var all_recipients = [];
 
 	if (lastfrom === null) {
 		setStatus("Select a message first to reply to it");
@@ -1059,18 +1072,23 @@ function replyHelper(isReplyAll) {
 			x = lastreplyto[x];
 			/* Don't skip anything in the Reply-To header, use that explicitly */
 			reply_to += (reply_to === "" ? "" : ", ") + x;
+			all_recipients.push(extractEmailAddress(x));
 		}
 	} else {
 		reply_to = lastfrom; /* Start off by initializing to the sender */
+		all_recipients.push(extractEmailAddress(lastfrom));
 	}
 
 	if (isReplyAll) {
 		/* Now, carry over any "To" recipients */
 		for (var x in lastto) {
 			x = lastto[x];
-			/* Even for reply all, if From and To are the same, don't add the address a second time */
-			if (x !== reply_to && x.indexOf('"' + document.getElementById('fromaddress').value + '"') === -1) {
+			/* Even for reply all, if From and To are the same, don't add the address a second time
+			 * Also, if one of the recipients is among our identities, exclude it (it'll likely get used for the "From",
+			 * and we don't want to also email ourselves just because we were Cc'd, for example. */
+			if (x !== reply_to && x.indexOf('"' + document.getElementById('fromaddress').value + '"') === -1 && !recipientIsRedundant(x)) {
 				reply_to += ", " + x;
+				all_recipients.push(extractEmailAddress(x));
 			} else {
 				console.debug("Not adding redundant " + x + " to To list");
 			}
@@ -1079,8 +1097,12 @@ function replyHelper(isReplyAll) {
 		/* Finally, do the "Cc" */
 		for (var x in lastcc) {
 			x = lastcc[x];
-			if (x !== reply_to && x.indexOf('"' + document.getElementById('fromaddress').value + '"') === -1) {
+			/* Same as To, checks, with one additional caveat:
+			 * If a recipient is already in the "To" list, then we don't include it again in the Cc. */
+			var x_email = extractEmailAddress(x);
+			if (x !== reply_to && x.indexOf('"' + document.getElementById('fromaddress').value + '"') === -1 && !recipientIsRedundant(x) && !recipientListContainsIdentity(all_recipients, x_email)) {
 				reply_cc += (reply_cc === "" ? "" : ", ") + x;
+				all_recipients.push(x_email);
 			} else {
 				console.debug("Not adding redundant " + x + " to Cc list");
 			}
