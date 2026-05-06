@@ -1086,14 +1086,14 @@ function replyHelper(isReplyAll) {
 			/* Even for reply all, if From and To are the same, don't add the address a second time
 			 * Also, if one of the recipients is among our identities, exclude it (it'll likely get used for the "From",
 			 * and we don't want to also email ourselves just because we were Cc'd, for example. */
-			if (x !== reply_to && x.indexOf('"' + document.getElementById('fromaddress').value + '"') === -1 && !recipientIsRedundant(x)) {
+			var x_email = extractEmailAddress(x);
+			if (x !== reply_to && x.indexOf('"' + document.getElementById('fromaddress').value + '"') === -1 && !recipientIsRedundant(x) && !recipientListContainsIdentity(all_recipients, x_email)) {
 				reply_to += ", " + x;
-				all_recipients.push(extractEmailAddress(x));
+				all_recipients.push(x_email);
 			} else {
 				console.debug("Not adding redundant " + x + " to To list");
 			}
 		}
-
 		/* Finally, do the "Cc" */
 		for (var x in lastcc) {
 			x = lastcc[x];
