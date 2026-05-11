@@ -977,15 +977,18 @@ function extractEmailAddress(email) {
 	var tmp = addr.indexOf('<');
 	if (tmp !== -1) { /* Use just the portion in <>, if specified */
 		addr = addr.substring(tmp + 1);
-		tmp = email.indexOf('>');
-		addr = addr.substring(0, tmp);
+		tmp = addr.indexOf('>');
+		if (tmp) {
+			addr = addr.substring(0, tmp);
+		}
 	}
 	return addr;
 }
 
 function recipientListContainsIdentity(list, identity) {
 	for (var idx = 0; idx < list.length; idx++) {
-		var recip_email = list[idx];
+		/* The item in the list may still have <>, and to normalize, we make comparisons without them. */
+		var recip_email = extractEmailAddress(list[idx]);
 		if (recip_email == identity) {
 			return true;
 		}
@@ -1027,7 +1030,7 @@ function doReply(replyto, replycc) {
 		 * contained any of our identities; if so, use the identity we find.
 		 * Can't just use indexOf here, because for each identity, we need to do a comparison
 		 * using just the email address */
-		if (recipientListContainsIdentity(lastto, idents[i]) || recipientListContainsIdentity(lastcc, idents[i])) {
+		if (recipientListContainsIdentity(lastto, email) || recipientListContainsIdentity(lastcc, email)) {
 			from = idents[i]; /* Use the full identity, not just the email portion (on match) */
 			console.debug("Overriding from identity to " + from);
 			break;
