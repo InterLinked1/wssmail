@@ -1122,10 +1122,15 @@ function replyAll() {
 	replyHelper(true);
 }
 
+function getTimestampFromEpoch(epoch) {
+	var date = new Date(epoch * 1000);
+	return date.toUTCString().replace("GMT", "+0000");
+}
+
 function forward() {
 	var fwdbody = "\r\n\r\n\r\n-------- Forwarded Message --------\r\n";
 	fwdbody += "Subject: \t" + lastsubject + "\r\n";
-	fwdbody += "Date: \t" + lastsent + "\r\n"; /* XXX Should use the appropriate date format */
+	fwdbody += "Date: \t" + getTimestampFromEpoch(lastsent) + "\r\n";
 	fwdbody += "From:  " + lastfrom + "\r\n";
 	fwdbody += "To: \t" + lastto + "\r\n";
 	fwdbody += "\r\n\r\n\r\n";
