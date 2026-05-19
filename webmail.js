@@ -1707,8 +1707,10 @@ function formatPT(body) {
 	body = body.replace(/\s\*(\S[^\*]+\S)\*/g, " <b>*$1*</b>");
 	body = body.replace(/\s\_(\S[^\_]+\S)\_/g, " <u>_$1_</u>");
 
-	/* Make links hyperlinks */
-	var urlRegex = /(https?:\/\/[^\s]+)/g;
+	/* Make links hyperlinks.
+	 * We stop at whitespace or a '>' (for URLs formatted like <URL>, since '>' isn't valid in URLs unencoded. However, since we already escaped the HTML, we are really looking for '&gt;'
+	 * Ditto for end parenthesis (not escaped). */
+	var urlRegex = /(https?:\/\/[^\s<>]+?)(?=(?:&gt;|\)|\s|$))/g;
 	body = body.replace(urlRegex, '<a href="$1" target="_blank" rel="noreferrer">$1</a>')
 
 	return body;
